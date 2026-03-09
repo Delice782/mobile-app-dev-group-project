@@ -1,5 +1,5 @@
 
-# waste_justic
+# waste_justi
 
 A new Flutter project.
 
