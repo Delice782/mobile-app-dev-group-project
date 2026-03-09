@@ -1,5 +1,5 @@
 
-# waste_jus
+# waste_ju
 
 A new Flutter project.
 
