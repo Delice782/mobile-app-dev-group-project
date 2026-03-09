@@ -1,5 +1,5 @@
 
-# wast
+# was
 
 A new Flutter project.
 
