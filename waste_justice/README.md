@@ -1,5 +1,5 @@
 
-# waste
+# wast
 
 A new Flutter project.
 
