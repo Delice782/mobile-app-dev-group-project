@@ -157,7 +157,7 @@ class _LocationPageState extends State<LocationPage> {
                   const SizedBox(height: 12),
                   
                   const Text(
-                    'First, click button below to share your current location. This helps us find nearest aggregators.',
+                    'First, click the button below to share your current location. This helps us find the nearest aggregators.',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
@@ -781,7 +781,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Weight (KG)',
-                        hintText: 'Enter total weight of plastic',
+                        hintText: 'Enter the total weight of plastic',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -790,7 +790,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter weight';
+                          return 'Please enter the weight';
                         }
                         final weight = double.tryParse(value);
                         if (weight == null || weight <= 0) {
@@ -886,7 +886,18 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       print('Starting camera capture...');
       print('Is web platform: $kIsWeb');
       
-      // Try camera on all platforms (web and mobile)
+      if (kIsWeb) {
+        // Web platform - camera not available, show message
+        _showNotification(
+          context,
+          'Camera Not Available on Web',
+          'Camera is not available in web browser. Please use the Gallery option to upload photos.',
+          isError: true,
+        );
+        return;
+      }
+      
+      // Mobile platform - try camera with local picker
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: ImageSource.camera,
@@ -914,19 +925,10 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       }
     } catch (e) {
       print('Camera error details: $e');
-      String errorMessage = 'Failed to capture photo: ${e.toString()}';
-      
-      // Provide more helpful error messages for common issues
-      if (e.toString().contains('cameraDelegate')) {
-        errorMessage = 'Camera is not available on this device/browser. Please try the Gallery option instead.';
-      } else if (e.toString().contains('permission')) {
-        errorMessage = 'Camera permission is required. Please check your browser/device settings.';
-      }
-      
       _showNotification(
         context,
         'Camera Error',
-        errorMessage,
+        'Failed to capture photo: ${e.toString()}',
         isError: true,
       );
     }
@@ -1336,7 +1338,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
                     
                     const SizedBox(height: 20),
