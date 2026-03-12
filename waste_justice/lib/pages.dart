@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-// Location page for getting user location and selecting aggregators
+// location page for getting user location and selecting aggregators
 class LocationPage extends StatefulWidget {
   const LocationPage({super.key});
 
@@ -18,7 +18,7 @@ class _LocationPageState extends State<LocationPage> {
   bool _isLoading = false;
   String _locationStatus = 'Location not requested';
 
-  // Method to request location permission
+  // method to request location permission
   Future<void> _requestLocationPermission() async {
     setState(() {
       _isLoading = true;
@@ -26,7 +26,7 @@ class _LocationPageState extends State<LocationPage> {
     });
 
     try {
-      // Check if location services are enabled
+      // check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showNotification(
@@ -42,7 +42,7 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      // Check location permission
+      // check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -75,7 +75,7 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      // Get current position
+      // get current position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -127,7 +127,7 @@ class _LocationPageState extends State<LocationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Step 1: Get Your Location
+            // step 1: get your location
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -166,7 +166,7 @@ class _LocationPageState extends State<LocationPage> {
                   
                   const SizedBox(height: 20),
                   
-                  // Get Location Button
+                  // get location button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -220,7 +220,7 @@ class _LocationPageState extends State<LocationPage> {
             
             const SizedBox(height: 24),
             
-            // Step 2: Select Nearest Aggregator
+            // step 2: select nearest aggregator
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -259,7 +259,7 @@ class _LocationPageState extends State<LocationPage> {
                   
                   const SizedBox(height: 20),
                   
-                  // Aggregator list
+                  // aggregator list
                   if (_locationPermissionGranted)
                     _buildAggregatorList()
                   else
@@ -297,7 +297,7 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  // Build aggregator list
+  // build aggregator list
   Widget _buildAggregatorList() {
     final List<Map<String, dynamic>> aggregators = [
       {
@@ -380,7 +380,7 @@ class _LocationPageState extends State<LocationPage> {
                     const SizedBox(width: 16),
                     Column(
                       children: [
-                        // Status buttons
+                        // status buttons
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -405,7 +405,7 @@ class _LocationPageState extends State<LocationPage> {
                         
                         const SizedBox(height: 8),
                         
-                        // Select & Go button
+                        // select & go button
                         SizedBox(
                           width: 120,
                           height: 40,
@@ -451,7 +451,7 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  // Method to display notifications
+  // method to display notifications
   void _showNotification(BuildContext context, String title, String message, {required bool isError}) {
     showDialog(
       context: context,
@@ -472,7 +472,7 @@ class _LocationPageState extends State<LocationPage> {
   }
 }
 
-// Aggregators page for viewing all aggregators
+// aggregators page for viewing all aggregators
 class AggregatorsPage extends StatelessWidget {
   const AggregatorsPage({super.key});
 
@@ -595,7 +595,7 @@ class AggregatorsPage extends StatelessWidget {
   }
 }
 
-// Waste type selection page
+// waste type selection page
 class WasteTypePage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
@@ -624,7 +624,27 @@ class _WasteTypePageState extends State<WasteTypePage> {
   ];
 
   void _proceedToFinalStep() {
-    if (_formKey.currentState!.validate() && _selectedWasteType != null) {
+    String errorMessage = '';
+    
+    // check if waste type is selected
+    if (_selectedWasteType == null || _selectedWasteType!.isEmpty) {
+      errorMessage = 'Please select a waste type to proceed.';
+    }
+    // check if weight is entered
+    else if (_weightController.text.isEmpty) {
+      errorMessage = 'Please enter the weight of your waste to proceed.';
+    }
+    // check if weight meets minimum requirement
+    else {
+      final weight = double.tryParse(_weightController.text);
+      if (weight == null || weight <= 0) {
+        errorMessage = 'Please enter a valid weight greater than 0.';
+      } else if (weight < 25) {
+        errorMessage = 'Sorry, minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
+      }
+    }
+    
+    if (errorMessage.isEmpty && _formKey.currentState!.validate()) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -639,8 +659,8 @@ class _WasteTypePageState extends State<WasteTypePage> {
     } else {
       _showNotification(
         context,
-        'Missing Information',
-        'Please select waste type and enter weight.',
+        'Required Information Missing',
+        errorMessage,
         isError: true,
       );
     }
@@ -666,7 +686,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Selected aggregator info
+            // selected aggregator info
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -713,7 +733,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
             
             const SizedBox(height: 24),
             
-            // Waste selection form
+            // waste selection form
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -744,7 +764,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                     
                     const SizedBox(height: 20),
                     
-                    // Waste type dropdown
+                    // waste type dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedWasteType,
                       decoration: InputDecoration(
@@ -775,18 +795,50 @@ class _WasteTypePageState extends State<WasteTypePage> {
                     
                     const SizedBox(height: 20),
                     
-                    // Weight input
+                    // minimum weight notice
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange.shade800,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Minimum weight requirement: 25 KG. Waste collections below 25 KG cannot be processed.',
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // weight input
                     TextFormField(
                       controller: _weightController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Weight (KG)',
-                        hintText: 'Enter total weight of plastic',
+                        hintText: 'Enter total weight of plastic (Minimum: 25 KG)',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         prefixIcon: const Icon(Icons.scale),
-                        helperText: 'e.g., 25.50',
+                        helperText: 'e.g., 25.50 (Minimum weight: 25 KG)',
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -796,13 +848,16 @@ class _WasteTypePageState extends State<WasteTypePage> {
                         if (weight == null || weight <= 0) {
                           return 'Please enter a valid weight greater than 0';
                         }
+                        if (weight < 25) {
+                          return 'Minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
+                        }
                         return null;
                       },
                     ),
                     
                     const SizedBox(height: 24),
                     
-                    // Proceed button
+                    // proceed button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -854,7 +909,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
   }
 }
 
-// Final submission page
+// final submission page
 class FinalSubmissionPage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
@@ -880,13 +935,13 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   bool _locationCaptured = false;
   List<XFile> _selectedImages = [];
 
-  // Method to capture image from camera
+  // method to capture image from camera
   Future<void> _captureImage() async {
     try {
       print('Starting camera capture...');
       print('Is web platform: $kIsWeb');
       
-      // Try camera on all platforms (web and mobile)
+      // try camera on all platforms (web and mobile)
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: ImageSource.camera,
@@ -916,7 +971,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       print('Camera error details: $e');
       String errorMessage = 'Failed to capture photo: ${e.toString()}';
       
-      // Provide more helpful error messages for common issues
+      // provide more helpful error messages for common issues
       if (e.toString().contains('cameraDelegate')) {
         errorMessage = 'Camera is not available on this device/browser. Please try the Gallery option instead.';
       } else if (e.toString().contains('permission')) {
@@ -932,7 +987,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
     }
   }
 
-  // Method to pick image from gallery
+  // method to pick image from gallery
   Future<void> _pickImageFromGallery() async {
     try {
       print('Starting gallery selection...');
@@ -974,7 +1029,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
     }
   }
 
-  // Method to remove selected image
+  // method to remove selected image
   void _removeImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
@@ -1004,7 +1059,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
         isError: false,
       );
       
-      // Navigate back to dashboard after successful submission
+      // navigate back to dashboard after successful submission
       Future.delayed(const Duration(seconds: 2), () {
         Navigator.of(context).popUntil((route) => route.isFirst);
       });
@@ -1038,7 +1093,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Selected information
+            // selected information
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1091,7 +1146,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
             
             const SizedBox(height: 24),
             
-            // Submission form
+            // submission form
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -1122,7 +1177,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     
                     const SizedBox(height: 20),
                     
-                    // Location field
+                    // location field
                     TextFormField(
                       controller: _locationController,
                       readOnly: true,
@@ -1156,7 +1211,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     
                     const SizedBox(height: 20),
                     
-                    // Photo upload section
+                    // photo upload section
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1177,7 +1232,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                         ),
                         const SizedBox(height: 12),
                         
-                        // Photo selection buttons
+                        // photo selection buttons
                         Row(
                           children: [
                             Expanded(
@@ -1214,7 +1269,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                         
                         const SizedBox(height: 12),
                         
-                        // Selected images preview
+                        // selected images preview
                         if (_selectedImages.isNotEmpty) ...[
                           const Text(
                             'Selected Photos:',
@@ -1341,7 +1396,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     
                     const SizedBox(height: 20),
                     
-                    // Additional notes
+                    // additional notes
                     TextFormField(
                       controller: _notesController,
                       maxLines: 3,
@@ -1357,7 +1412,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     
                     const SizedBox(height: 24),
                     
-                    // What happens next section
+                    // what happens next section
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1396,7 +1451,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     
                     const SizedBox(height: 24),
                     
-                    // Submit button
+                    // submit button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -1425,7 +1480,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
             
             const SizedBox(height: 16),
             
-            // Footer
+            // footer
             Center(
               child: Text(
                 '© 2025 WasteJustice. Building a cleaner Ghana together.\nFair • Transparent • Connected',
