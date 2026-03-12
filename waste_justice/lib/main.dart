@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'login_page.dart';
 import 'pages.dart';
 
 // main entry point for the WasteJustice application
@@ -130,6 +131,16 @@ class _DashboardPageState extends State<DashboardPage> {
         backgroundColor: Colors.green.shade600,
         elevation: 0,
         actions: [
+          // login / account icon - leads to login page
+          IconButton(
+            icon: const Icon(Icons.login, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+              );
+            },
+          ),
           // hamburger menu icon
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
@@ -1015,6 +1026,18 @@ class MenuPage extends StatelessWidget {
             title: 'Dashboard',
             onTap: () {
               Navigator.pop(context);
+            },
+          ),
+          
+          _buildMenuItem(
+            context,
+            icon: Icons.login,
+            title: 'Login',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+              );
             },
           ),
           
