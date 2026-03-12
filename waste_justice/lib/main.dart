@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'login_page.dart';
 import 'pages.dart';
+import 'home_page.dart';
 
 // main entry point for the WasteJustice application
 void main() {
