@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import 'signup_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -72,8 +73,9 @@ class HomePage extends StatelessWidget {
           const SizedBox(width: 4),
           ElevatedButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sign up coming soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SignupPage()),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -374,8 +376,9 @@ class HomePage extends StatelessWidget {
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sign up coming soon!')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => SignupPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(

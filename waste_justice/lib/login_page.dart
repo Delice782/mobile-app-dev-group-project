@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'signup_page.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -267,11 +267,8 @@ class _LoginPageState extends State<LoginPage> {
               WidgetSpan(
                 child: GestureDetector(
                   onTap: () {
-                    // TODO: Navigate to sign-up page when implemented
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Sign up flow coming soon.'),
-                      ),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => SignupPage()),
                     );
                   },
                   child: Text(
