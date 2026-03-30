@@ -1,6 +1,12 @@
+// import 'package:flutter/material.dart';
+// import 'login_page.dart';
+// import 'signup_page.dart';
+// import 'contact_utils.dart';  // ADD THIS LINE
+
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
+import 'pages.dart';  // Add this line if not already there
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -144,18 +150,33 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
+          // _buildCard(
+          //   icon: '♻️',
+          //   title: 'For Waste Collectors',
+          //   body: 'Track your waste collection, view transparent prices, and get fair compensation for your work.',
+          //   buttonText: 'Register as Collector',
+          //   isPrimary: true,
+          //   onPressed: () {
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(content: Text('Collector registration coming soon!')),
+          //     );
+          //   },
+          // ),
+
           _buildCard(
             icon: '♻️',
             title: 'For Waste Collectors',
             body: 'Track your waste collection, view transparent prices, and get fair compensation for your work.',
-            buttonText: 'Register as Collector',
+            buttonText: 'Test Collector Features',
             isPrimary: true,
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Collector registration coming soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => LocationPage()),  // ← No "const" here!
               );
             },
           ),
+
           const SizedBox(height: 12),
           _buildCard(
             icon: '🏭',

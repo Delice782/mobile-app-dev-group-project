@@ -4,6 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'contact_utils.dart';
+
 
 // location page for getting user location and selecting aggregators
 class LocationPage extends StatefulWidget {
@@ -18,7 +20,6 @@ class _LocationPageState extends State<LocationPage> {
   bool _isLoading = false;
   String _locationStatus = 'Location not requested';
 
-  // method to request location permission
   Future<void> _requestLocationPermission() async {
     setState(() {
       _isLoading = true;
@@ -26,15 +27,11 @@ class _LocationPageState extends State<LocationPage> {
     });
 
     try {
-      // check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showNotification(
-          context,
-          'Location Services Disabled',
-          'Please enable location services to find nearest aggregators.',
-          isError: true,
-        );
+        _showNotification(context, 'Location Services Disabled',
+            'Please enable location services to find nearest aggregators.',
+            isError: true);
         setState(() {
           _isLoading = false;
           _locationStatus = 'Location services disabled';
@@ -42,17 +39,13 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      // check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          _showNotification(
-            context,
-            'Permission Denied',
-            'Location permission is required to find nearest aggregators.',
-            isError: true,
-          );
+          _showNotification(context, 'Permission Denied',
+              'Location permission is required to find nearest aggregators.',
+              isError: true);
           setState(() {
             _isLoading = false;
             _locationStatus = 'Location permission denied';
@@ -62,12 +55,9 @@ class _LocationPageState extends State<LocationPage> {
       }
 
       if (permission == LocationPermission.deniedForever) {
-        _showNotification(
-          context,
-          'Permission Permanently Denied',
-          'Please enable location permission in app settings.',
-          isError: true,
-        );
+        _showNotification(context, 'Permission Permanently Denied',
+            'Please enable location permission in app settings.',
+            isError: true);
         setState(() {
           _isLoading = false;
           _locationStatus = 'Location permission permanently denied';
@@ -75,7 +65,6 @@ class _LocationPageState extends State<LocationPage> {
         return;
       }
 
-      // get current position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -83,27 +72,21 @@ class _LocationPageState extends State<LocationPage> {
       setState(() {
         _locationPermissionGranted = true;
         _isLoading = false;
-        _locationStatus = 'Location obtained: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        _locationStatus =
+        'Location obtained: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
       });
 
-      _showNotification(
-        context,
-        'Location Obtained',
-        'Your location has been successfully obtained.',
-        isError: false,
-      );
-
+      _showNotification(context, 'Location Obtained',
+          'Your location has been successfully obtained.',
+          isError: false);
     } catch (e) {
       setState(() {
         _isLoading = false;
         _locationStatus = 'Error getting location';
       });
-      _showNotification(
-        context,
-        'Location Error',
-        'Failed to get your location. Please try again.',
-        isError: true,
-      );
+      _showNotification(context, 'Location Error',
+          'Failed to get your location. Please try again.',
+          isError: true);
     }
   }
 
@@ -112,13 +95,8 @@ class _LocationPageState extends State<LocationPage> {
     return Scaffold(
       backgroundColor: Colors.green.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Get Location',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('Get Location',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
         elevation: 0,
       ),
@@ -127,7 +105,7 @@ class _LocationPageState extends State<LocationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // step 1: get your location
+            // Step 1: Get location
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -135,92 +113,73 @@ class _LocationPageState extends State<LocationPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Step 1: Get Your Location',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  
+                  const Text('Step 1: Get Your Location',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87)),
                   const SizedBox(height: 12),
-                  
                   const Text(
-                    'First, click button below to share your current location. This helps us find nearest aggregators.',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                  ),
-                  
+                      'First, click the button below to share your current location. This helps us find the nearest aggregators.',
+                      style: TextStyle(color: Colors.grey, fontSize: 14)),
                   const SizedBox(height: 20),
-                  
-                  // get location button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _requestLocationPermission,
+                      onPressed:
+                      _isLoading ? null : _requestLocationPermission,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade600,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       child: _isLoading
                           ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text('Getting Location...'),
-                              ],
-                            )
-                          : const Text(
-                              'Get My Location',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                      Colors.white))),
+                          SizedBox(width: 12),
+                          Text('Getting Location...'),
+                        ],
+                      )
+                          : const Text('Get My Location',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  
                   const SizedBox(height: 12),
-                  
-                  Text(
-                    _locationStatus,
-                    style: TextStyle(
-                      color: _locationPermissionGranted ? Colors.green.shade600 : Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text(_locationStatus,
+                      style: TextStyle(
+                          color: _locationPermissionGranted
+                              ? Colors.green.shade600
+                              : Colors.grey.shade600,
+                          fontSize: 12)),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // step 2: select nearest aggregator
+
+            // Step 2: Select aggregator
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -228,38 +187,25 @@ class _LocationPageState extends State<LocationPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Step 2: Select Nearest Aggregator',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  
+                  const Text('Step 2: Select Nearest Aggregator',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87)),
                   const SizedBox(height: 12),
-                  
                   const Text(
-                    'Here are the nearest aggregators sorted by distance. Click "Select & Go" to choose one.',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                  ),
-                  
+                      'Here are the nearest aggregators sorted by distance. You can call or SMS them, or tap "Select & Go".',
+                      style: TextStyle(color: Colors.grey, fontSize: 14)),
                   const SizedBox(height: 20),
-                  
-                  // aggregator list
                   if (_locationPermissionGranted)
                     _buildAggregatorList()
                   else
@@ -267,24 +213,17 @@ class _LocationPageState extends State<LocationPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8)),
                       child: Column(
                         children: [
-                          Icon(
-                            Icons.location_off,
-                            size: 40,
-                            color: Colors.grey.shade400,
-                          ),
+                          Icon(Icons.location_off,
+                              size: 40, color: Colors.grey.shade400),
                           const SizedBox(height: 8),
-                          Text(
-                            'Enable location to see nearest aggregators',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
+                          Text('Enable location to see nearest aggregators',
+                              style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14)),
                         ],
                       ),
                     ),
@@ -297,7 +236,6 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  // build aggregator list
   Widget _buildAggregatorList() {
     final List<Map<String, dynamic>> aggregators = [
       {
@@ -330,116 +268,107 @@ class _LocationPageState extends State<LocationPage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(8),
-            ),
+                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Name, address, contact, distance
+                Text(aggregator['name'],
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(aggregator['address'],
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(aggregator['contact'],
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(aggregator['distance'],
+                    style: TextStyle(
+                        color: Colors.green.shade600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500)),
+
+                const SizedBox(height: 12),
+
+                // ── ACTION BUTTONS ──────────────────────────
                 Row(
                   children: [
+                    // Call button
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            aggregator['name'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            aggregator['address'],
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            aggregator['contact'],
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            aggregator['distance'],
-                            style: TextStyle(
-                              color: Colors.green.shade600,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      child: ElevatedButton.icon(
+                        onPressed: () => ContactUtils.makeCall(
+                            context, aggregator['contact']),
+                        icon: const Icon(Icons.phone, size: 16),
+                        label: const Text('Call'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Column(
-                      children: [
-                        // status buttons
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.location_on, size: 14, color: Colors.blue.shade800),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Address Available',
-                                style: TextStyle(
-                                  color: Colors.blue.shade800,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+
+                    const SizedBox(width: 8),
+
+                    // SMS button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => ContactUtils.sendSms(
+                          context,
+                          aggregator['contact'],
+                          message:
+                          'Hi, I have waste ready for collection at your location.',
                         ),
-                        
-                        const SizedBox(height: 8),
-                        
-                        // select & go button
-                        SizedBox(
-                          width: 120,
-                          height: 40,
-                          child: ElevatedButton(
-                            onPressed: aggregator['active']
-                                ? () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => WasteTypePage(
-                                          aggregatorName: aggregator['name'],
-                                          aggregatorAddress: aggregator['address'],
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: aggregator['active'] ? Colors.green.shade600 : Colors.grey.shade300,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                        icon: const Icon(Icons.sms, size: 16),
+                        label: const Text('SMS'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Select & Go button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: aggregator['active']
+                            ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WasteTypePage(
+                                aggregatorName: aggregator['name'],
+                                aggregatorAddress:
+                                aggregator['address'],
+                                aggregatorContact:
+                                aggregator['contact'],
                               ),
                             ),
-                            child: const Text(
-                              'Select & Go',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                          );
+                        }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: aggregator['active']
+                              ? Colors.green.shade600
+                              : Colors.grey.shade300,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                      ],
+                        child: const Text('Select',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold)),
+                      ),
                     ),
                   ],
                 ),
@@ -451,20 +380,20 @@ class _LocationPageState extends State<LocationPage> {
     );
   }
 
-  // method to display notifications
-  void _showNotification(BuildContext context, String title, String message, {required bool isError}) {
+  void _showNotification(BuildContext context, String title, String message,
+      {required bool isError}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
           content: Text(message),
-          backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
+          backgroundColor:
+          isError ? Colors.red.shade50 : Colors.green.shade50,
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'))
           ],
         );
       },
@@ -472,47 +401,38 @@ class _LocationPageState extends State<LocationPage> {
   }
 }
 
-// aggregators page for viewing all aggregators
+// ─── AGGREGATORS PAGE ──────────────────────────────────────
 class AggregatorsPage extends StatelessWidget {
   const AggregatorsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> aggregators = [
-      {'name': 'EcoRecycle Ghana', 'location': 'Accra', 'rating': 4.8, 'active': true},
-      {'name': 'Green Solutions Ltd', 'location': 'Kumasi', 'rating': 4.5, 'active': true},
-      {'name': 'Plastic Recovery Co', 'location': 'Tema', 'rating': 4.2, 'active': false},
-      {'name': 'Sustainable Waste Mgt', 'location': 'Takoradi', 'rating': 4.6, 'active': true},
-      {'name': 'uwdb', 'location': 'University Area', 'rating': 4.9, 'active': true},
+      {'name': 'EcoRecycle Ghana', 'location': 'Accra', 'contact': '+233555123456', 'rating': 4.8, 'active': true},
+      {'name': 'Green Solutions Ltd', 'location': 'Kumasi', 'contact': '+233544987654', 'rating': 4.5, 'active': true},
+      {'name': 'Plastic Recovery Co', 'location': 'Tema', 'contact': '+233244567890', 'rating': 4.2, 'active': false},
+      {'name': 'Sustainable Waste Mgt', 'location': 'Takoradi', 'contact': '+233208765432', 'rating': 4.6, 'active': true},
+      {'name': 'uwdb', 'location': 'University Area', 'contact': '+23354827397', 'rating': 4.9, 'active': true},
     ];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text(
-          'All Aggregators',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('All Aggregators',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
         elevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          const Text(
-            'Available Aggregators',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          
+          const Text('Available Aggregators',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87)),
           const SizedBox(height: 16),
-          
           ...aggregators.map((aggregator) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -523,66 +443,117 @@ class AggregatorsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2))
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.green.shade100,
-                      child: Icon(Icons.business, color: Colors.green.shade600),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            aggregator['name'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.green.shade100,
+                          child: Icon(Icons.business,
+                              color: Colors.green.shade600),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
-                              const SizedBox(width: 4),
-                              Text(
-                                aggregator['location'],
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                              ),
-                              const SizedBox(width: 16),
-                              Icon(Icons.star, size: 14, color: Colors.orange.shade600),
-                              const SizedBox(width: 4),
-                              Text(
-                                aggregator['rating'].toString(),
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                              Text(aggregator['name'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on,
+                                      size: 14,
+                                      color: Colors.grey.shade600),
+                                  const SizedBox(width: 4),
+                                  Text(aggregator['location'],
+                                      style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 14)),
+                                  const SizedBox(width: 16),
+                                  Icon(Icons.star,
+                                      size: 14,
+                                      color: Colors.orange.shade600),
+                                  const SizedBox(width: 4),
+                                  Text(aggregator['rating'].toString(),
+                                      style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 14)),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: aggregator['active'] ? Colors.green.shade100 : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        aggregator['active'] ? 'Active' : 'Inactive',
-                        style: TextStyle(
-                          color: aggregator['active'] ? Colors.green.shade800 : Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: aggregator['active']
+                                ? Colors.green.shade100
+                                : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            aggregator['active'] ? 'Active' : 'Inactive',
+                            style: TextStyle(
+                                color: aggregator['active']
+                                    ? Colors.green.shade800
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ── CALL + SMS BUTTONS ──────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => ContactUtils.makeCall(
+                                context, aggregator['contact']),
+                            icon: const Icon(Icons.phone, size: 16),
+                            label: const Text('Call'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => ContactUtils.sendSms(
+                              context,
+                              aggregator['contact'],
+                              message:
+                              'Hi, I have waste ready for collection.',
+                            ),
+                            icon: const Icon(Icons.sms, size: 16),
+                            label: const Text('SMS'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -595,15 +566,17 @@ class AggregatorsPage extends StatelessWidget {
   }
 }
 
-// waste type selection page
+// ─── WASTE TYPE PAGE ───────────────────────────────────────
 class WasteTypePage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
+  final String aggregatorContact; // ← new param
 
   const WasteTypePage({
     super.key,
     required this.aggregatorName,
     required this.aggregatorAddress,
+    required this.aggregatorContact,
   });
 
   @override
@@ -625,25 +598,20 @@ class _WasteTypePageState extends State<WasteTypePage> {
 
   void _proceedToFinalStep() {
     String errorMessage = '';
-    
-    // check if waste type is selected
     if (_selectedWasteType == null || _selectedWasteType!.isEmpty) {
       errorMessage = 'Please select a waste type to proceed.';
-    }
-    // check if weight is entered
-    else if (_weightController.text.isEmpty) {
+    } else if (_weightController.text.isEmpty) {
       errorMessage = 'Please enter the weight of your waste to proceed.';
-    }
-    // check if weight meets minimum requirement
-    else {
+    } else {
       final weight = double.tryParse(_weightController.text);
       if (weight == null || weight <= 0) {
         errorMessage = 'Please enter a valid weight greater than 0.';
       } else if (weight < 25) {
-        errorMessage = 'Sorry, minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
+        errorMessage =
+        'Sorry, minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
       }
     }
-    
+
     if (errorMessage.isEmpty && _formKey.currentState!.validate()) {
       Navigator.push(
         context,
@@ -651,18 +619,15 @@ class _WasteTypePageState extends State<WasteTypePage> {
           builder: (context) => FinalSubmissionPage(
             aggregatorName: widget.aggregatorName,
             aggregatorAddress: widget.aggregatorAddress,
+            aggregatorContact: widget.aggregatorContact, // ← pass through
             wasteType: _selectedWasteType!,
             weight: _weightController.text,
           ),
         ),
       );
     } else {
-      _showNotification(
-        context,
-        'Required Information Missing',
-        errorMessage,
-        isError: true,
-      );
+      _showNotification(context, 'Required Information Missing', errorMessage,
+          isError: true);
     }
   }
 
@@ -671,13 +636,9 @@ class _WasteTypePageState extends State<WasteTypePage> {
     return Scaffold(
       backgroundColor: Colors.green.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Select Waste Type',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('Select Waste Type',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
         elevation: 0,
       ),
@@ -686,7 +647,6 @@ class _WasteTypePageState extends State<WasteTypePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // selected aggregator info
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -694,46 +654,68 @@ class _WasteTypePageState extends State<WasteTypePage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Selected Aggregator',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  const Text('Selected Aggregator',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87)),
                   const SizedBox(height: 8),
-                  Text(
-                    widget.aggregatorName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    widget.aggregatorAddress,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
+                  Text(widget.aggregatorName,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text(widget.aggregatorAddress,
+                      style: TextStyle(
+                          color: Colors.grey.shade600, fontSize: 14)),
+                  const SizedBox(height: 12),
+                  // Quick call/sms from this page too
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => ContactUtils.makeCall(
+                            context, widget.aggregatorContact),
+                        icon: const Icon(Icons.phone, size: 14),
+                        label: const Text('Call'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => ContactUtils.sendSms(
+                          context,
+                          widget.aggregatorContact,
+                          message:
+                          'Hi, I am on my way with waste for collection.',
+                        ),
+                        icon: const Icon(Icons.sms, size: 14),
+                        label: const Text('SMS'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // waste selection form
+
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -741,11 +723,10 @@ class _WasteTypePageState extends State<WasteTypePage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Form(
@@ -753,49 +734,32 @@ class _WasteTypePageState extends State<WasteTypePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Waste Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    
+                    const Text('Waste Information',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87)),
                     const SizedBox(height: 20),
-                    
-                    // waste type dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedWasteType,
                       decoration: InputDecoration(
                         labelText: 'Select Plastic Type',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            borderRadius: BorderRadius.circular(8)),
                         prefixIcon: const Icon(Icons.category),
                       ),
                       items: _wasteTypes.map((String type) {
                         return DropdownMenuItem<String>(
-                          value: type,
-                          child: Text(type),
-                        );
+                            value: type, child: Text(type));
                       }).toList(),
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedWasteType = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a waste type';
-                        }
-                        return null;
-                      },
+                      onChanged: (String? value) =>
+                          setState(() => _selectedWasteType = value),
+                      validator: (value) =>
+                      (value == null || value.isEmpty)
+                          ? 'Please select a waste type'
+                          : null,
                     ),
-                    
                     const SizedBox(height: 20),
-                    
-                    // minimum weight notice
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -805,59 +769,44 @@ class _WasteTypePageState extends State<WasteTypePage> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.orange.shade800,
-                            size: 20,
-                          ),
+                          Icon(Icons.info_outline,
+                              color: Colors.orange.shade800, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Minimum weight requirement: 25 KG. Waste collections below 25 KG cannot be processed.',
+                              'Minimum weight requirement: 25 KG.',
                               style: TextStyle(
-                                color: Colors.orange.shade800,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
+                                  color: Colors.orange.shade800,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    
                     const SizedBox(height: 16),
-                    
-                    // weight input
                     TextFormField(
                       controller: _weightController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Weight (KG)',
-                        hintText: 'Enter total weight of plastic (Minimum: 25 KG)',
+                        hintText: 'Minimum: 25 KG',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            borderRadius: BorderRadius.circular(8)),
                         prefixIcon: const Icon(Icons.scale),
-                        helperText: 'e.g., 25.50 (Minimum weight: 25 KG)',
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.isEmpty)
                           return 'Please enter weight';
-                        }
                         final weight = double.tryParse(value);
-                        if (weight == null || weight <= 0) {
-                          return 'Please enter a valid weight greater than 0';
-                        }
-                        if (weight < 25) {
-                          return 'Minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
-                        }
+                        if (weight == null || weight <= 0)
+                          return 'Please enter a valid weight';
+                        if (weight < 25)
+                          return 'Minimum weight is 25 KG';
                         return null;
                       },
                     ),
-                    
                     const SizedBox(height: 24),
-                    
-                    // proceed button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -867,16 +816,12 @@ class _WasteTypePageState extends State<WasteTypePage> {
                           backgroundColor: Colors.green.shade600,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text(
-                          'Proceed to Final Step',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: const Text('Proceed to Final Step',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -889,30 +834,30 @@ class _WasteTypePageState extends State<WasteTypePage> {
     );
   }
 
-  void _showNotification(BuildContext context, String title, String message, {required bool isError}) {
+  void _showNotification(BuildContext context, String title, String message,
+      {required bool isError}) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
-          actions: [
-            TextButton(
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        backgroundColor:
+        isError ? Colors.red.shade50 : Colors.green.shade50,
+        actions: [
+          TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
+              child: const Text('OK'))
+        ],
+      ),
     );
   }
 }
 
-// final submission page
+// ─── FINAL SUBMISSION PAGE ─────────────────────────────────
 class FinalSubmissionPage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
+  final String aggregatorContact; // ← new param
   final String wasteType;
   final String weight;
 
@@ -920,6 +865,7 @@ class FinalSubmissionPage extends StatefulWidget {
     super.key,
     required this.aggregatorName,
     required this.aggregatorAddress,
+    required this.aggregatorContact,
     required this.wasteType,
     required this.weight,
   });
@@ -935,141 +881,74 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   bool _locationCaptured = false;
   List<XFile> _selectedImages = [];
 
-  // method to capture image from camera
   Future<void> _captureImage() async {
     try {
-      print('Starting camera capture...');
-      print('Is web platform: $kIsWeb');
-      
-      // try camera on all platforms (web and mobile)
+      if (kIsWeb) {
+        _showNotification(context, 'Camera Not Available on Web',
+            'Please use the Gallery option to upload photos.',
+            isError: true);
+        return;
+      }
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 80,
-        maxWidth: 800,
-        maxHeight: 600,
-      );
-      
-      print('Image picker result: $image');
-      
+          source: ImageSource.camera, imageQuality: 80);
       if (image != null) {
-        print('Image captured successfully: ${image!.path}');
-        setState(() {
-          _selectedImages.add(image!);
-        });
-        
+        setState(() => _selectedImages.add(image));
         _showNotification(
-          context,
-          'Photo Captured',
-          'Photo has been successfully captured.',
-          isError: false,
-        );
-      } else {
-        print('No image selected from camera');
+            context, 'Photo Captured', 'Photo captured successfully.',
+            isError: false);
       }
     } catch (e) {
-      print('Camera error details: $e');
-      String errorMessage = 'Failed to capture photo: ${e.toString()}';
-      
-      // provide more helpful error messages for common issues
-      if (e.toString().contains('cameraDelegate')) {
-        errorMessage = 'Camera is not available on this device/browser. Please try the Gallery option instead.';
-      } else if (e.toString().contains('permission')) {
-        errorMessage = 'Camera permission is required. Please check your browser/device settings.';
-      }
-      
-      _showNotification(
-        context,
-        'Camera Error',
-        errorMessage,
-        isError: true,
-      );
+      _showNotification(context, 'Camera Error',
+          'Failed to capture photo: ${e.toString()}',
+          isError: true);
     }
   }
 
-  // method to pick image from gallery
   Future<void> _pickImageFromGallery() async {
     try {
-      print('Starting gallery selection...');
-      print('Is web platform: $kIsWeb');
-      
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-        maxWidth: 800,
-        maxHeight: 600,
-      );
-      
-      print('Gallery picker result: $image');
-      
+          source: ImageSource.gallery, imageQuality: 80);
       if (image != null) {
-        print('Image selected successfully: ${image!.path}');
-        setState(() {
-          _selectedImages.add(image!);
-        });
-        
+        setState(() => _selectedImages.add(image));
         _showNotification(
-          context,
-          'Photo Selected',
-          'Photo has been successfully selected from gallery.',
-          isError: false,
-        );
-      } else {
-        print('No image selected from gallery');
+            context, 'Photo Selected', 'Photo selected successfully.',
+            isError: false);
       }
     } catch (e) {
-      print('Gallery error details: $e');
-      _showNotification(
-        context,
-        'Gallery Error',
-        'Failed to select photo: ${e.toString()}',
-        isError: true,
-      );
+      _showNotification(context, 'Gallery Error',
+          'Failed to select photo: ${e.toString()}',
+          isError: true);
     }
   }
 
-  // method to remove selected image
-  void _removeImage(int index) {
-    setState(() {
-      _selectedImages.removeAt(index);
-    });
-  }
+  void _removeImage(int index) =>
+      setState(() => _selectedImages.removeAt(index));
 
   void _captureLocation() {
     setState(() {
       _locationCaptured = true;
-      _locationController.text = 'Location captured: ${DateTime.now().toString().substring(0, 19)}';
+      _locationController.text =
+      'Location captured: ${DateTime.now().toString().substring(0, 19)}';
     });
-    
-    _showNotification(
-      context,
-      'Location Captured',
-      'Your location has been successfully verified.',
-      isError: false,
-    );
+    _showNotification(context, 'Location Captured',
+        'Your location has been successfully verified.',
+        isError: false);
   }
 
   void _submitWasteCollection() {
     if (_formKey.currentState!.validate() && _locationCaptured) {
-      _showNotification(
-        context,
-        'Submission Successful',
-        'Your waste collection has been submitted successfully!',
-        isError: false,
-      );
-      
-      // navigate back to dashboard after successful submission
+      _showNotification(context, 'Submission Successful',
+          'Your waste collection has been submitted successfully!',
+          isError: false);
       Future.delayed(const Duration(seconds: 2), () {
         Navigator.of(context).popUntil((route) => route.isFirst);
       });
     } else if (!_locationCaptured) {
-      _showNotification(
-        context,
-        'Location Required',
-        'Please capture your location before submitting.',
-        isError: true,
-      );
+      _showNotification(context, 'Location Required',
+          'Please capture your location before submitting.',
+          isError: true);
     }
   }
 
@@ -1078,13 +957,9 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
     return Scaffold(
       backgroundColor: Colors.green.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Step 3: Submit Waste',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('Step 3: Submit Waste',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
         elevation: 0,
       ),
@@ -1093,7 +968,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // selected information
+            // Summary card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1101,52 +976,71 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'You have selected ${widget.aggregatorName}. Now capture your GPS location and submit your waste collection to get the correct price.',
+                    'Submitting to ${widget.aggregatorName}',
                     style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                    ),
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  Text('Type: ${widget.wasteType}'),
+                  Text('Weight: ${widget.weight} KG'),
+
+                  const SizedBox(height: 16),
+
+                  // ── CALL + SMS AGGREGATOR ─────────────────
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          'Aggregator: ${widget.aggregatorName}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        child: ElevatedButton.icon(
+                          onPressed: () => ContactUtils.makeCall(
+                              context, widget.aggregatorContact),
+                          icon: const Icon(Icons.phone, size: 16),
+                          label: const Text('Call Aggregator'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Type: ${widget.wasteType}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        child: ElevatedButton.icon(
+                          onPressed: () => ContactUtils.sendSms(
+                            context,
+                            widget.aggregatorContact,
+                            message:
+                            'I am at your location with ${widget.weight}kg of ${widget.wasteType}.',
+                          ),
+                          icon: const Icon(Icons.sms, size: 16),
+                          label: const Text('SMS Aggregator'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade600,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Weight: ${widget.weight} KG',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // submission form
+
+            // Submission form
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -1154,11 +1048,10 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2))
                 ],
               ),
               child: Form(
@@ -1166,237 +1059,161 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Submit Waste Collection Details',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    
+                    const Text('Submit Waste Collection Details',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87)),
                     const SizedBox(height: 20),
-                    
-                    // location field
+
+                    // Location
                     TextFormField(
                       controller: _locationController,
                       readOnly: true,
                       decoration: InputDecoration(
                         labelText: 'Current Location at Aggregator',
-                        hintText: 'Click "Capture Location" to verify your location',
+                        hintText: 'Click "Capture Location" to verify',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                            borderRadius: BorderRadius.circular(8)),
                         prefixIcon: const Icon(Icons.location_on),
                         suffixIcon: ElevatedButton(
                           onPressed: _captureLocation,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            foregroundColor: Colors.white,
-                          ),
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white),
                           child: const Text('Capture Location'),
                         ),
                       ),
                     ),
-                    
                     const SizedBox(height: 8),
-                    
                     const Text(
-                      'Click "Capture Location" to verify you are at the aggregator\'s location. This ensures accurate pricing and transaction processing.',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
+                      'Click "Capture Location" to verify you are at the aggregator\'s location.',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
-                    // photo upload section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                    // Photo buttons
+                    const Text('Upload Photo of wastes',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                    const Text('Photos help aggregators verify waste quality',
+                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 12),
+                    Row(
                       children: [
-                        const Text(
-                          'Upload Photo of wastes',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _captureImage,
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Take Photo'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Photos help aggregators verify waste quality',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _pickImageFromGallery,
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Gallery'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        
-                        // photo selection buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _captureImage,
-                                icon: const Icon(Icons.camera_alt),
-                                label: const Text('Take Photo'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green.shade600,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _pickImageFromGallery,
-                                icon: const Icon(Icons.photo_library),
-                                label: const Text('Gallery'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade600,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        const SizedBox(height: 12),
-                        
-                        // selected images preview
-                        if (_selectedImages.isNotEmpty) ...[
-                          const Text(
-                            'Selected Photos:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 100,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _selectedImages.length,
-                              itemBuilder: (context, index) {
-                                final image = _selectedImages[index];
-                                return Container(
-                                  width: 100,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.shade300),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      kIsWeb
-                                          ? Image.network(
-                                              image.path,
-                                              width: 100,
-                                              height: 100,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 100,
-                                                  height: 100,
-                                                  color: Colors.grey.shade200,
-                                                  child: const Icon(
-                                                    Icons.broken_image,
-                                                    color: Colors.grey,
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                          : Image.file(
-                                              File(image.path),
-                                              width: 100,
-                                              height: 100,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 100,
-                                                  height: 100,
-                                                  color: Colors.grey.shade200,
-                                                  child: const Icon(
-                                                    Icons.broken_image,
-                                                    color: Colors.grey,
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                      Positioned(
-                                        top: 4,
-                                        right: 4,
-                                        child: GestureDetector(
-                                          onTap: () => _removeImage(index),
-                                          child: Container(
-                                            width: 24,
-                                            height: 24,
-                                            decoration: const BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ] else ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.photo_camera_outlined,
-                                  size: 40,
-                                  color: Colors.grey.shade400,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'No photos selected',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Max 5MB per photo, JPG/PNG format',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ],
                     ),
-                    
+
+                    const SizedBox(height: 12),
+
+                    // Image previews
+                    if (_selectedImages.isNotEmpty) ...[
+                      const Text('Selected Photos:',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _selectedImages.length,
+                          itemBuilder: (context, index) {
+                            final image = _selectedImages[index];
+                            return Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: Colors.grey.shade300),
+                                  borderRadius:
+                                  BorderRadius.circular(8)),
+                              child: Stack(
+                                children: [
+                                  kIsWeb
+                                      ? Image.network(image.path,
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover)
+                                      : Image.file(File(image.path),
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: GestureDetector(
+                                      onTap: () => _removeImage(index),
+                                      child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle),
+                                        child: const Icon(Icons.close,
+                                            color: Colors.white,
+                                            size: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Column(
+                          children: [
+                            Icon(Icons.photo_camera_outlined,
+                                size: 40, color: Colors.grey.shade400),
+                            const SizedBox(height: 8),
+                            Text('No photos selected',
+                                style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 20),
-                    
-                    // additional notes
+
+                    // Notes
                     TextFormField(
                       controller: _notesController,
                       maxLines: 3,
@@ -1404,54 +1221,13 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                         labelText: 'Additional Notes (Optional)',
                         hintText: 'Any extra information about waste',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        helperText: 'e.g., Clean and sorted, collected from beach cleanup...',
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
-                    // what happens next section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'What Happens Next?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...[
-                            '1. Submit your waste collection with accurate weight and plastic type',
-                            '2. The aggregator will review and accept your delivery',
-                            '3. You\'ll receive payment via mobile money after acceptance',
-                            '4. Leave feedback about your experience',
-                          ].map((step) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              step,
-                              style: TextStyle(
-                                color: Colors.grey.shade700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )).toList(),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // submit button
+
+                    // Submit button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -1461,34 +1237,26 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                           backgroundColor: Colors.green.shade600,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                         child: const Text(
-                          'Submit Waste Collection at This Location',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                            'Submit Waste Collection at This Location',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // footer
             Center(
               child: Text(
                 '© 2025 WasteJustice. Building a cleaner Ghana together.\nFair • Transparent • Connected',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ),
           ],
@@ -1497,22 +1265,21 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
     );
   }
 
-  void _showNotification(BuildContext context, String title, String message, {required bool isError}) {
+  void _showNotification(BuildContext context, String title, String message,
+      {required bool isError}) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
-          actions: [
-            TextButton(
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        backgroundColor:
+        isError ? Colors.red.shade50 : Colors.green.shade50,
+        actions: [
+          TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
+              child: const Text('OK'))
+        ],
+      ),
     );
   }
 }
