@@ -29,7 +29,7 @@ class ContactUtils {
     } else { 
       _showError(context, 'Could not open SMS app for $phoneNumber');
     }
-  }
+  } 
  
   static void _showError(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
