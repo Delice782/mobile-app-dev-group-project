@@ -13,7 +13,7 @@ class ContactUtils {
     }
   }
 
-  // Launch SMS app with number and optional pre-filled message
+  // Launch SMS app with number and optional pre-filled message 
   static Future<void> sendSms(
       BuildContext context, 
       String phoneNumber, {
