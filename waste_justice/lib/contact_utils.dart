@@ -6,7 +6,7 @@ class ContactUtils {
   // Launch phone dialer with number pre-filled 
   static Future<void> makeCall(BuildContext context, String phoneNumber) async {
     final Uri uri = Uri(scheme: 'tel', path: phoneNumber); 
-    if (await canLaunchUrl(uri)) {
+    if (await canLaunchUrl(uri)) { 
       await launchUrl(uri);
     } else {
       _showError(context, 'Could not open dialer for $phoneNumber');
