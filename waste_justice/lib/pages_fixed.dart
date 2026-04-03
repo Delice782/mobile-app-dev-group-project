@@ -33,7 +33,7 @@ class _LocationPageState extends State<LocationPage> {
           context,
           'Location Services Disabled', 
           'Please enable location services to find nearest aggregators.',
-          isError: true,
+          isError: true, 
         );
         setState(() {
           _isLoading = false;
