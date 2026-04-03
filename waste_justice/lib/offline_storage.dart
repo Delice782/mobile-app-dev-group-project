@@ -21,7 +21,7 @@ class OfflineStorageService {
     final box = Hive.box(_boxName);
     await box.delete('pendingRequests');
   }
-
+ 
   static Future<void> savePrices(Map<String, dynamic> prices) async {
     final box = Hive.box(_boxName);
     await box.put('cachedPrices', prices);
