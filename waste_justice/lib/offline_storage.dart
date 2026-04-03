@@ -31,7 +31,7 @@ class OfflineStorageService {
     final box = Hive.box(_boxName);
     return box.get('cachedPrices');
   }
-
+ 
   static Future<void> saveUserCredentials(String userId, String token) async {
     final box = Hive.box(_boxName);
     await box.put('userCredentials', {'userId': userId, 'token': token});
