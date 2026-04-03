@@ -7,7 +7,7 @@ class OfflineStorageService {
   static Future<void> saveRequest(Map<String, dynamic> request) async {
     final box = Hive.box(_boxName);
     final List requests = box.get('pendingRequests', defaultValue: []);
-    requests.add(request);
+    requests.add(request); 
     await box.put('pendingRequests', requests);
     print('Request saved offline');
   }
