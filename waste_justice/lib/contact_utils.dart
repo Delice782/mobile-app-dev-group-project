@@ -18,7 +18,7 @@ class ContactUtils {
       BuildContext context, 
       String phoneNumber, {
         String? message,
-      }) async {
+      }) async { 
     final Uri uri = Uri(
       scheme: 'sms',
       path: phoneNumber,
