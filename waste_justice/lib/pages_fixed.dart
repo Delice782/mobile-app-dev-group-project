@@ -31,7 +31,7 @@ class _LocationPageState extends State<LocationPage> {
       if (!serviceEnabled) {
         _showNotification(
           context,
-          'Location Services Disabled',
+          'Location Services Disabled', 
           'Please enable location services to find nearest aggregators.',
           isError: true,
         );
