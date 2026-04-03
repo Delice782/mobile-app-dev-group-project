@@ -60,7 +60,7 @@ class _LocationPageState extends State<LocationPage> {
           return;
         }
       }
-
+ 
       if (permission == LocationPermission.deniedForever) {
         _showNotification(
           context,
