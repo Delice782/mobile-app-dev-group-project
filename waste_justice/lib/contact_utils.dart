@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart'; 
 import 'package:url_launcher/url_launcher.dart';
 
-class ContactUtils {
+class ContactUtils { 
   // Launch phone dialer with number pre-filled
   static Future<void> makeCall(BuildContext context, String phoneNumber) async {
     final Uri uri = Uri(scheme: 'tel', path: phoneNumber);
