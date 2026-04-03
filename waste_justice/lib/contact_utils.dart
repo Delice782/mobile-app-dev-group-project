@@ -26,7 +26,7 @@ class ContactUtils {
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
-    } else {
+    } else { 
       _showError(context, 'Could not open SMS app for $phoneNumber');
     }
   }
