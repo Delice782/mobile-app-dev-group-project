@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 class OfflineStorageService {
   static const String _boxName = 'wasteJusticeBox';
-
+ 
   static Future<void> saveRequest(Map<String, dynamic> request) async {
     final box = Hive.box(_boxName);
     final List requests = box.get('pendingRequests', defaultValue: []);
