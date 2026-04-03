@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 class ContactUtils { 
   // Launch phone dialer with number pre-filled 
   static Future<void> makeCall(BuildContext context, String phoneNumber) async {
-    final Uri uri = Uri(scheme: 'tel', path: phoneNumber);
+    final Uri uri = Uri(scheme: 'tel', path: phoneNumber); 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
