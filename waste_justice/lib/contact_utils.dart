@@ -38,5 +38,5 @@ class ContactUtils {
         backgroundColor: Colors.red.shade600,
       ),
     );
-  }
+  } 
 }
