@@ -9,7 +9,7 @@ class ContactUtils {
     if (await canLaunchUrl(uri)) { 
       await launchUrl(uri);
     } else {
-      _showError(context, 'Could not open dialer for $phoneNumber');
+      _showError(context, 'Could not open dialer for $phoneNumber'); 
     }
   }  
  
