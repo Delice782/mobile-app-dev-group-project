@@ -24,7 +24,7 @@ class _LocationPageState extends State<LocationPage> {
       _isLoading = true;
       _locationStatus = 'Requesting location permission...';
     });
-
+ 
     try {
       // check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
