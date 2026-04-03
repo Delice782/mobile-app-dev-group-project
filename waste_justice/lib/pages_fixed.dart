@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // location page for getting user location and selecting aggregators
 class LocationPage extends StatefulWidget {
   const LocationPage({super.key});
-
+ 
   @override
   State<LocationPage> createState() => _LocationPageState();
 }
