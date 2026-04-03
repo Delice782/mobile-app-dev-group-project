@@ -23,7 +23,7 @@ class ContactUtils {
       scheme: 'sms',
       path: phoneNumber, 
       queryParameters: message != null ? {'body': message} : null,
-    );
+    ); 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else { 
