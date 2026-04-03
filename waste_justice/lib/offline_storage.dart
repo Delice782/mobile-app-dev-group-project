@@ -11,7 +11,7 @@ class OfflineStorageService {
     await box.put('pendingRequests', requests);
     print('Request saved offline');
   }
-
+ 
   static List getPendingRequests() {
     final box = Hive.box(_boxName);
     return box.get('pendingRequests', defaultValue: []);
