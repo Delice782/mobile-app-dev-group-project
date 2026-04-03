@@ -586,7 +586,7 @@ class AggregatorsPage extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
+              ), 
             );
           }).toList(),
         ],
