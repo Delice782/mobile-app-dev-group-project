@@ -12,7 +12,7 @@ class ContactUtils {
       _showError(context, 'Could not open dialer for $phoneNumber'); 
     }
   }  
- 
+  
   // Launch SMS app with number and optional pre-filled message 
   static Future<void> sendSms(
       BuildContext context, 
