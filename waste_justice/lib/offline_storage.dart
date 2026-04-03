@@ -34,7 +34,7 @@ class OfflineStorageService {
  
   static Future<void> saveUserCredentials(String userId, String token) async { 
     final box = Hive.box(_boxName);
-    await box.put('userCredentials', {'userId': userId, 'token': token});
+    await box.put('userCredentials', {'userId': userId, 'token': token}); 
   }
 
   static Map? getUserCredentials() {
