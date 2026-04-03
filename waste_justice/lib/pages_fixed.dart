@@ -41,7 +41,7 @@ class _LocationPageState extends State<LocationPage> {
         });
         return;
       }
-
+ 
       // check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
