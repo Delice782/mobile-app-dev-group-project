@@ -8,7 +8,7 @@ class OfflineStorageService {
     final box = Hive.box(_boxName);
     final List requests = box.get('pendingRequests', defaultValue: []); 
     requests.add(request); 
-    await box.put('pendingRequests', requests);
+    await box.put('pendingRequests', requests); 
     print('Request saved offline');
   }
  
