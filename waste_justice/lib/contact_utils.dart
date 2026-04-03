@@ -21,7 +21,7 @@ class ContactUtils {
       }) async { 
     final Uri uri = Uri(
       scheme: 'sms',
-      path: phoneNumber,
+      path: phoneNumber, 
       queryParameters: message != null ? {'body': message} : null,
     );
     if (await canLaunchUrl(uri)) {
