@@ -15,7 +15,7 @@ class ContactUtils {
 
   // Launch SMS app with number and optional pre-filled message
   static Future<void> sendSms(
-      BuildContext context,
+      BuildContext context, 
       String phoneNumber, {
         String? message,
       }) async {
