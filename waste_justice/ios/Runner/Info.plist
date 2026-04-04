@@ -51,5 +51,7 @@
 	<string>This app needs photo library access to select existing photos of waste</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs location access to find nearest waste aggregators</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for collector voice interactions</string>
 </dict>
 </plist>

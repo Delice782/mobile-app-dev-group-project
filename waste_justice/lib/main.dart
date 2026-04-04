@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'login_page.dart';
 import 'pages.dart';
 import 'home_page.dart';
@@ -707,7 +705,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -818,7 +816,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -909,7 +907,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
