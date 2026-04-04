@@ -1,0 +1,49 @@
+# WasteJustice API .htaccess Configuration
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory
+RewriteBase /api/
+
+# Handle preflight OPTIONS requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Route API requests
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ $1.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP settings
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_value error_reporting E_ALL & ~E_DEPRECATED & ~E_STRICT
+    php_value max_execution_time 300
+    php_value post_max_size 20M
+    php_value upload_max_filesize 20M
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_flag display_errors Off
+    php_value error_reporting E_ALL & ~E_DEPRECATED & ~E_STRICT
+    php_value max_execution_time 300
+    php_value post_max_size 20M
+    php_value upload_max_filesize 20M
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Custom error pages
+ErrorDocument 404 /api/index.php
+ErrorDocument 500 /api/index.php

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -22,20 +23,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  // register background message handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // only register background message handler on non-web platforms
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    }
+  } catch (e) {
+    print('Firebase initialization error: $e');
+    // Continue with app initialization even if Firebase fails
+  }
 
   // initialize Hive for offline storage
   await Hive.initFlutter();
   await Hive.openBox('wasteJusticeBox');
 
-  // initialize notification service
-  await NotificationService().init();
+  try {
+    // initialize notification service
+    await NotificationService().init();
+  } catch (e) {
+    print('Notification service initialization error: $e');
+    // Continue with app initialization even if notifications fail
+  }
 
   runApp(const WasteJusticeApp());
 }
