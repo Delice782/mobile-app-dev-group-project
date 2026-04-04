@@ -1,10 +1,45 @@
+  
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
+=======
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'firebase_options.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+>>>>>>> 09ed1922cd54e8bd2985e91a58f167f273c9c766
 import 'login_page.dart';
 import 'pages.dart';
 import 'home_page.dart';
+import 'notification.dart';
+import 'offline_storage.dart';
+
+// background message handler - must be top-level function
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('Background notification received: ${message.notification?.title}');
+}
 
 // main entry point for the WasteJustice application
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // register background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // initialize Hive for offline storage
+  await Hive.initFlutter();
+  await Hive.openBox('wasteJusticeBox');
+
+  // initialize notification service
+  await NotificationService().init();
+
   runApp(const WasteJusticeApp());
 }
 
@@ -21,7 +56,6 @@ class WasteJusticeApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      //home: const DashboardPage(),
       home: const HomePage(),
       debugShowCheckedModeBanner: false,
     );
@@ -39,20 +73,20 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   // minimum weight requirement for waste uploads in KG
   static const double minimumWeightKG = 5.0;
-  
+
   // controllers for form inputs
   final TextEditingController _weightController = TextEditingController();
-  
+
   // dashboard statistics - these will be dynamic from database
   double totalEarnings = 45000.0; // UGX
   int totalDeliveries = 12;
-  
+
   // form key for validation
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   // current selected tab
   int _selectedTab = 1; // Start with Prices tab (index 1)
-  
+
   // plastic prices data - this will come from database
   final Map<String, Map<String, dynamic>> _plasticPrices = {
     'PET': {'price': 1200, 'change': 5, 'description': 'Water bottles'},
@@ -63,48 +97,58 @@ class _DashboardPageState extends State<DashboardPage> {
   };
 
   // method to handle waste upload with weight validation
-  void _uploadWaste() {
+  void _uploadWaste() async {
     if (_formKey.currentState!.validate()) {
       final double weight = double.parse(_weightController.text);
-      
+
       // check if weight is below minimum requirement
       if (weight < minimumWeightKG) {
         _showNotification(
           'Weight Below Minimum',
           'The minimum weight for upload is ${minimumWeightKG.toStringAsFixed(1)} KG. '
-          'Current weight: ${weight.toStringAsFixed(1)} KG.',
+              'Current weight: ${weight.toStringAsFixed(1)} KG.',
           isError: true,
         );
         return;
       }
-      
+
+      // save request offline first (works even without internet)
+      await OfflineStorageService.saveRequest({
+        'weight': weight,
+        'type': 'Mixed',
+        'status': 'pending',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
       // simulate successful upload
       _showNotification(
         'Upload Successful',
-        'Waste of ${weight.toStringAsFixed(1)} KG has been uploaded successfully.',
+        'Waste of ${weight.toStringAsFixed(1)} KG has been saved. It will sync when connected.',
         isError: false,
       );
-      
-      // update dashboard statistics (simulation)
+
+      // update dashboard statistics
       setState(() {
         totalDeliveries++;
-        totalEarnings += weight * 1000; // suppose that 1000 UGX per KG
+        totalEarnings += weight * 1000;
       });
-      
+
       // clear the form
       _weightController.clear();
     }
   }
 
   // method to display notifications to the user
-  void _showNotification(String title, String message, {required bool isError}) {
+  void _showNotification(String title, String message,
+      {required bool isError}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
           content: Text(message),
-          backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
+          backgroundColor:
+          isError ? Colors.red.shade50 : Colors.green.shade50,
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -180,24 +224,31 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // interactive action buttons section
             Row(
               children: [
-                Expanded(child: _buildInteractiveActionButton('Upload', Icons.upload, 0)),
+                Expanded(
+                    child: _buildInteractiveActionButton('Upload', Icons.upload, 0)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildInteractiveActionButton('Prices', Icons.price_check, 1)),
+                Expanded(
+                    child: _buildInteractiveActionButton(
+                        'Prices', Icons.price_check, 1)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildInteractiveActionButton('Buyers', Icons.people, 2)),
+                Expanded(
+                    child: _buildInteractiveActionButton(
+                        'Buyers', Icons.people, 2)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildInteractiveActionButton('Earnings', Icons.trending_up, 3)),
+                Expanded(
+                    child: _buildInteractiveActionButton(
+                        'Earnings', Icons.trending_up, 3)),
               ],
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // dynamic content based on selected tab
             _buildSelectedTabContent(),
           ],
@@ -206,8 +257,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // helper method to build statistics cards
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -252,8 +303,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // helper method to build interactive action buttons
-  Widget _buildInteractiveActionButton(String label, IconData icon, int tabIndex) {
+  Widget _buildInteractiveActionButton(
+      String label, IconData icon, int tabIndex) {
     bool isSelected = _selectedTab == tabIndex;
     return Container(
       height: 50,
@@ -282,16 +333,19 @@ class _DashboardPageState extends State<DashboardPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                icon, 
-                size: 20, 
-                color: isSelected ? Colors.white : Colors.green.shade600,
+                icon,
+                size: 20,
+                color:
+                isSelected ? Colors.white : Colors.green.shade600,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.grey.shade700,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -302,23 +356,21 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // method to build content based on selected tab
   Widget _buildSelectedTabContent() {
     switch (_selectedTab) {
-      case 0: // upload tab - navigate to location page
+      case 0:
         return _buildUploadNavigationContent();
-      case 1: // prices tab
+      case 1:
         return _buildPricesContent();
-      case 2: // buyers tab - navigate to aggregators page
+      case 2:
         return _buildBuyersNavigationContent();
-      case 3: // earnings tab
+      case 3:
         return _buildEarningsContent();
       default:
         return _buildUploadNavigationContent();
     }
   }
 
-  // upload navigation content
   Widget _buildUploadNavigationContent() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -345,20 +397,12 @@ class _DashboardPageState extends State<DashboardPage> {
               color: Colors.black87,
             ),
           ),
-          
           const SizedBox(height: 16),
-          
           const Text(
             'Start the waste submission process by getting your location and selecting the nearest aggregator.',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
-          
           const SizedBox(height: 24),
-          
-          // start submission button
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -366,7 +410,8 @@ class _DashboardPageState extends State<DashboardPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LocationPage()),
+                  MaterialPageRoute(
+                      builder: (context) => const LocationPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -378,10 +423,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               child: const Text(
                 'Start Waste Submission',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -390,7 +433,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // buyers navigation content
   Widget _buildBuyersNavigationContent() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -417,20 +459,12 @@ class _DashboardPageState extends State<DashboardPage> {
               color: Colors.black87,
             ),
           ),
-          
           const SizedBox(height: 16),
-          
           const Text(
             'View all available waste aggregators in your area and their contact information.',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
-          
           const SizedBox(height: 24),
-          
-          // view aggregators button
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -438,7 +472,8 @@ class _DashboardPageState extends State<DashboardPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AggregatorsPage()),
+                  MaterialPageRoute(
+                      builder: (context) => const AggregatorsPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -450,10 +485,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               child: const Text(
                 'View All Aggregators',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -462,149 +495,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ppload tab content
-  Widget _buildUploadContent() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Upload Plastic Waste',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // ppload form
-          Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // photo upload section
-                GestureDetector(
-                  onTap: () {
-                    _showNotification(
-                      'Camera Feature',
-                      'Camera feature will be implemented here. This will allow you to take photos of your waste from multiple angles.',
-                      isError: false,
-                    );
-                  },
-                  child: Container(
-                    height: 120,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey.shade50,
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.camera_alt,
-                          size: 40,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Photos (Take multiple angles)',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Tap to open camera',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // weight input field
-                TextFormField(
-                  controller: _weightController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Weight (KG)',
-                    hintText: 'Enter waste weight in kilograms',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: const Icon(Icons.scale),
-                    helperText: 'Minimum weight: ${minimumWeightKG.toStringAsFixed(1)} KG',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter the weight';
-                    }
-                    final weight = double.tryParse(value);
-                    if (weight == null || weight <= 0) {
-                      return 'Please enter a valid weight greater than 0';
-                    }
-                    return null;
-                  },
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // upload button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _uploadWaste,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Upload Waste',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // prices tab content
   Widget _buildPricesContent() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -626,32 +516,22 @@ class _DashboardPageState extends State<DashboardPage> {
           const Text(
             'Prices',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87),
           ),
-          
           const SizedBox(height: 8),
-          
           const Text(
             'Prices updated daily. Check back for the best rates!',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
-          
           const SizedBox(height: 20),
-          
-          // plastic prices list
           ..._plasticPrices.entries.map((entry) {
             final String type = entry.key;
             final Map<String, dynamic> data = entry.value;
             final double price = data['price'].toDouble();
             final int change = data['change'];
             final String description = data['description'];
-            
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Container(
@@ -667,35 +547,34 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '$type ($description)',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
+                          Text('$type ($description)',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16)),
                           const SizedBox(height: 4),
-                          Text(
-                            'UGX ${price.toStringAsFixed(0)}/kg',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade600,
-                            ),
-                          ),
+                          Text('UGX ${price.toStringAsFixed(0)}/kg',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade600)),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: change >= 0 ? Colors.green.shade100 : Colors.red.shade100,
+                        color: change >= 0
+                            ? Colors.green.shade100
+                            : Colors.red.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         change >= 0 ? '+$change%' : '$change%',
                         style: TextStyle(
-                          color: change >= 0 ? Colors.green.shade800 : Colors.red.shade800,
+                          color: change >= 0
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -711,6 +590,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+<<<<<<< HEAD
   // buyers tab content
   Widget _buildBuyersContent() {
     final List<Map<String, dynamic>> buyers = [
@@ -823,6 +703,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // earnings tab content
+=======
+>>>>>>> 09ed1922cd54e8bd2985e91a58f167f273c9c766
   Widget _buildEarningsContent() {
     final List<Map<String, dynamic>> earnings = [
       {'date': '2024-03-12', 'weight': 8.5, 'amount': 8500, 'type': 'PET'},
@@ -831,7 +713,6 @@ class _DashboardPageState extends State<DashboardPage> {
       {'date': '2024-03-09', 'weight': 5.5, 'amount': 5500, 'type': 'LDPE'},
       {'date': '2024-03-08', 'weight': 7.8, 'amount': 7800, 'type': 'PP'},
     ];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -849,18 +730,12 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Earnings',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          
+          const Text('Earnings',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87)),
           const SizedBox(height: 20),
-          
-          // earnings list
           ...earnings.map((earning) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -877,31 +752,24 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            earning['date'],
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
+                          Text(earning['date'],
+                              style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14)),
                           const SizedBox(height: 4),
-                          Text(
-                            '${earning['weight']} kg ${earning['type']}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
+                          Text('${earning['weight']} kg ${earning['type']}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16)),
                         ],
                       ),
                     ),
                     Text(
                       'UGX ${earning['amount'].toStringAsFixed(0)}',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade600,
-                      ),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade600),
                     ),
                   ],
                 ),
@@ -923,26 +791,21 @@ class MenuPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Menu',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('Menu',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
         elevation: 0,
         actions: [
-          // logout button in top right
           TextButton.icon(
             onPressed: () {
-              // show logout confirmation dialog
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text('Logout'),
-                    content: const Text('Are you sure you want to logout?'),
+                    content:
+                    const Text('Are you sure you want to logout?'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -950,9 +813,8 @@ class MenuPage extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pop(); // close dialog
-                          Navigator.of(context).pop(); // go back to dashboard
-                          // todo: implement actual logout logic
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop();
                         },
                         child: const Text('Logout'),
                       ),
@@ -962,17 +824,14 @@ class MenuPage extends StatelessWidget {
               );
             },
             icon: const Icon(Icons.logout, color: Colors.white),
-            label: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.white),
-            ),
+            label: const Text('Logout',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // user profile section
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -984,143 +843,79 @@ class MenuPage extends StatelessWidget {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.green.shade600,
-                  child: const Icon(
-                    Icons.person,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.person,
+                      size: 30, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Waste Collector',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      const Text('Waste Collector',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(
-                        'collector@wastejustice.com',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                        ),
-                      ),
+                      Text('collector@wastejustice.com',
+                          style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14)),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-          
           const SizedBox(height: 32),
-          
-          // menu items
-          _buildMenuItem(
-            context,
-            icon: Icons.dashboard,
-            title: 'Dashboard',
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          
-          _buildMenuItem(
-            context,
-            icon: Icons.login,
-            title: 'Login',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-              );
-            },
-          ),
-          
-          _buildMenuItem(
-            context,
-            icon: Icons.history,
-            title: 'History',
-            onTap: () {
-              _showNotification(
-                context,
-                'History Page',
-                'This is where you can view your waste collection history.',
-                isError: false,
-              );
-            },
-          ),
-          
-          _buildMenuItem(
-            context,
-            icon: Icons.settings,
-            title: 'Settings',
-            onTap: () {
-              _showNotification(
-                context,
-                'Settings Page',
-                'This is where you can manage your app settings.',
-                isError: false,
-              );
-            },
-          ),
-          
-          _buildMenuItem(
-            context,
-            icon: Icons.help,
-            title: 'Help & Support',
-            onTap: () {
-              _showNotification(
-                context,
-                'Help & Support Page',
-                'Find answers to your questions and get support here.',
-                isError: false,
-              );
-            },
-          ),
-          
-          _buildMenuItem(
-            context,
-            icon: Icons.info,
-            title: 'About',
-            onTap: () {
-              _showNotification(
-                context,
-                'About Page',
-                'Information about WasteJustice app.',
-                isError: false,
-              );
-            },
-          ),
-          
+          _buildMenuItem(context,
+              icon: Icons.dashboard,
+              title: 'Dashboard',
+              onTap: () => Navigator.pop(context)),
+          _buildMenuItem(context,
+              icon: Icons.login,
+              title: 'Login',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (context) => const LoginPage()))),
+          _buildMenuItem(context,
+              icon: Icons.history,
+              title: 'History',
+              onTap: () => _showNotification(context, 'History Page',
+                  'View your waste collection history.',
+                  isError: false)),
+          _buildMenuItem(context,
+              icon: Icons.settings,
+              title: 'Settings',
+              onTap: () => _showNotification(context, 'Settings Page',
+                  'Manage your app settings.',
+                  isError: false)),
+          _buildMenuItem(context,
+              icon: Icons.help,
+              title: 'Help & Support',
+              onTap: () => _showNotification(context,
+                  'Help & Support', 'Get support here.',
+                  isError: false)),
+          _buildMenuItem(context,
+              icon: Icons.info,
+              title: 'About',
+              onTap: () => _showNotification(
+                  context, 'About', 'WasteJustice app v1.0.0',
+                  isError: false)),
           const SizedBox(height: 32),
-          
-          // app version
           Center(
-            child: Text(
-              'WasteJustice v1.0.0',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 12,
-              ),
-            ),
+            child: Text('WasteJustice v1.0.0',
+                style: TextStyle(
+                    color: Colors.grey.shade500, fontSize: 12)),
           ),
         ],
       ),
     );
   }
 
-  // helper method to build menu items
-  Widget _buildMenuItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildMenuItem(BuildContext context,
+      {required IconData icon,
+        required String title,
+        required VoidCallback onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -1136,26 +931,15 @@ class MenuPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  color: Colors.green.shade600,
-                  size: 24,
-                ),
+                Icon(icon, color: Colors.green.shade600, size: 24),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.grey.shade400,
-                  size: 16,
-                ),
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500))),
+                Icon(Icons.arrow_forward_ios,
+                    color: Colors.grey.shade400, size: 16),
               ],
             ),
           ),
@@ -1164,19 +948,21 @@ class MenuPage extends StatelessWidget {
     );
   }
 
-  // method to display notifications to user
-  void _showNotification(BuildContext context, String title, String message, {required bool isError}) {
+  void _showNotification(BuildContext context, String title,
+      String message,
+      {required bool isError}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
           content: Text(message),
-          backgroundColor: isError ? Colors.red.shade50 : Colors.green.shade50,
+          backgroundColor:
+          isError ? Colors.red.shade50 : Colors.green.shade50,
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
