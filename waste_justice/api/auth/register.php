@@ -69,7 +69,7 @@ try {
     
     // Insert new waste collector
     $insertQuery = "INSERT INTO User (firstName, lastName, userName, userEmail, userPassword, userContact, userRole, status, subscription_status) 
-                    VALUES (:firstName, :lastName, :userName, :userEmail, :userPassword, :userContact, 'Waste Collector', 'pending', 'free')";
+                    VALUES (:firstName, :lastName, :userName, :userEmail, :userPassword, :userContact, 'Waste Collector', 'active', 'free')";
     
     $stmt = $conn->prepare($insertQuery);
     $stmt->bindParam(':firstName', $data['firstName']);
@@ -100,7 +100,7 @@ try {
         sendSuccessResponse([
             'user' => $user,
             'token' => $token
-        ], 'Registration successful. Your account is pending approval.');
+        ], 'Registration successful! You can now login immediately.');
         
     } else {
         sendServerErrorResponse('Registration failed');

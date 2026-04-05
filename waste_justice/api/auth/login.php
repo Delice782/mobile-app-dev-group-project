@@ -55,10 +55,6 @@ try {
         sendErrorResponse('Your account has been suspended', 403);
     }
     
-    if ($user['status'] === 'pending') {
-        sendErrorResponse('Your account is pending approval', 403);
-    }
-    
     // Check subscription status
     if ($user['subscription_status'] === 'expired') {
         sendErrorResponse('Your subscription has expired. Please renew to continue.', 403);
