@@ -8,8 +8,8 @@ class Database {
     private $host = 'localhost';
     private $db_name = 'wastejustice';
     private $username = 'root';
-    private $password = '';
-    private $charset = 'utf8mb4';
+    private $password = 'Nsabimana2@';
+    private $charset = 'mobileapps_2026B_steve_nsabimana';
     
     public $conn;
     
