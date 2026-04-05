@@ -5,8 +5,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'login_page.dart';
 import 'pages.dart';
 import 'home_page.dart';
@@ -411,6 +409,15 @@ class _DashboardPageState extends State<DashboardPage> {
           const Text(
             'Start the waste submission process by getting your location and selecting the nearest aggregator.',
             style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tip: voice input (microphone) is available on the last step, so you can speak waste details instead of typing.',
+            style: TextStyle(
+              color: Colors.green.shade800,
+              fontSize: 13,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 24),
           SizedBox(

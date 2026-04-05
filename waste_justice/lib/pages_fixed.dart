@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
  
 // location page for getting user location and selecting aggregators
@@ -191,7 +190,7 @@ class _LocationPageState extends State<LocationPage> {
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Text('Getting Location...'),
                               ],
                             )
@@ -588,7 +587,7 @@ class AggregatorsPage extends StatelessWidget {
                 ),
               ), 
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -746,7 +745,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                     
                     // waste type dropdown
                     DropdownButtonFormField<String>(
-                      value: _selectedWasteType,
+                      initialValue: _selectedWasteType,
                       decoration: InputDecoration(
                         labelText: 'Select Plastic Type',
                         border: OutlineInputBorder(
@@ -878,7 +877,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   final TextEditingController _notesController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _locationCaptured = false;
-  List<XFile> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
 
   // method to capture image from camera
   Future<void> _captureImage() async {
@@ -909,9 +908,9 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       print('Image picker result: $image');
       
       if (image != null) {
-        print('Image captured successfully: ${image!.path}');
+        print('Image captured successfully: ${image.path}');
         setState(() {
-          _selectedImages.add(image!);
+          _selectedImages.add(image);
         });
         
         _showNotification(
@@ -951,9 +950,9 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       print('Gallery picker result: $image');
       
       if (image != null) {
-        print('Image selected successfully: ${image!.path}');
+        print('Image selected successfully: ${image.path}');
         setState(() {
-          _selectedImages.add(image!);
+          _selectedImages.add(image);
         });
         
         _showNotification(
@@ -1338,7 +1337,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
                     
                     const SizedBox(height: 20),
@@ -1391,7 +1390,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                                 fontSize: 12,
                               ),
                             ),
-                          )).toList(),
+                          )),
                         ],
                       ),
                     ),
