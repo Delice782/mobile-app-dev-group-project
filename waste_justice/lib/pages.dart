@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'contact_utils.dart';
 
 
@@ -559,7 +560,7 @@ class AggregatorsPage extends StatelessWidget {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -741,7 +742,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                             color: Colors.black87)),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      value: _selectedWasteType,
+                      initialValue: _selectedWasteType,
                       decoration: InputDecoration(
                         labelText: 'Select Plastic Type',
                         border: OutlineInputBorder(
@@ -796,13 +797,16 @@ class _WasteTypePageState extends State<WasteTypePage> {
                         prefixIcon: const Icon(Icons.scale),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Please enter weight';
+                        }
                         final weight = double.tryParse(value);
-                        if (weight == null || weight <= 0)
+                        if (weight == null || weight <= 0) {
                           return 'Please enter a valid weight';
-                        if (weight < 25)
+                        }
+                        if (weight < 25) {
                           return 'Minimum weight is 25 KG';
+                        }
                         return null;
                       },
                     ),
@@ -879,7 +883,43 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   final TextEditingController _notesController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _locationCaptured = false;
-  List<XFile> _selectedImages = [];
+  bool _microphoneReady = false;
+  final List<XFile> _selectedImages = [];
+
+  Future<void> _enableMicrophone() async {
+    final status = await Permission.microphone.request();
+    if (!mounted) return;
+
+    if (status.isGranted) {
+      setState(() => _microphoneReady = true);
+      _showNotification(
+        context,
+        'Microphone Enabled',
+        'Microphone is ready for collector interactions.',
+        isError: false,
+      );
+    } else {
+      setState(() => _microphoneReady = false);
+      _showNotification(
+        context,
+        'Microphone Permission Needed',
+        'Please allow microphone access to use voice interactions.',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _testVibration() async {
+    await HapticFeedback.mediumImpact();
+    await HapticFeedback.vibrate();
+    if (!mounted) return;
+    _showNotification(
+      context,
+      'Vibration Test',
+      'Vibration feedback is working on this device.',
+      isError: false,
+    );
+  }
 
   Future<void> _captureImage() async {
     try {
@@ -932,6 +972,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
       _locationController.text =
       'Location captured: ${DateTime.now().toString().substring(0, 19)}';
     });
+    HapticFeedback.lightImpact();
     _showNotification(context, 'Location Captured',
         'Your location has been successfully verified.',
         isError: false);
@@ -939,6 +980,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
 
   void _submitWasteCollection() {
     if (_formKey.currentState!.validate() && _locationCaptured) {
+      HapticFeedback.heavyImpact();
       _showNotification(context, 'Submission Successful',
           'Your waste collection has been submitted successfully!',
           isError: false);
@@ -946,6 +988,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       });
     } else if (!_locationCaptured) {
+      HapticFeedback.selectionClick();
       _showNotification(context, 'Location Required',
           'Please capture your location before submitting.',
           isError: true);
@@ -1089,6 +1132,62 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                     const Text(
                       'Click "Capture Location" to verify you are at the aggregator\'s location.',
                       style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      'Local Resources',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _enableMicrophone,
+                            icon: const Icon(Icons.mic),
+                            label: const Text('Enable Microphone'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.purple.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _testVibration,
+                            icon: const Icon(Icons.vibration),
+                            label: const Text('Test Vibration'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _microphoneReady
+                          ? 'Microphone status: enabled'
+                          : 'Microphone status: not enabled',
+                      style: TextStyle(
+                        color: _microphoneReady
+                            ? Colors.green.shade700
+                            : Colors.grey.shade700,
+                        fontSize: 12,
+                      ),
                     ),
 
                     const SizedBox(height: 20),
