@@ -18,7 +18,7 @@ $data = getJsonInput();
 $data = sanitizeInput($data);
 
 // Validate required fields
-$requiredFields = ['userName', 'userEmail', 'userPassword', 'userContact'];
+$requiredFields = ['firstName', 'lastName', 'userName', 'userEmail', 'userPassword', 'userContact'];
 $errors = validateRequiredFields($data, $requiredFields);
 
 if (!empty($errors)) {
@@ -68,10 +68,12 @@ try {
     $hashedPassword = password_hash($data['userPassword'], PASSWORD_DEFAULT);
     
     // Insert new waste collector
-    $insertQuery = "INSERT INTO User (userName, userEmail, userPassword, userContact, userRole, status, subscription_status) 
-                    VALUES (:userName, :userEmail, :userPassword, :userContact, 'Waste Collector', 'pending', 'free')";
+    $insertQuery = "INSERT INTO User (firstName, lastName, userName, userEmail, userPassword, userContact, userRole, status, subscription_status) 
+                    VALUES (:firstName, :lastName, :userName, :userEmail, :userPassword, :userContact, 'Waste Collector', 'pending', 'free')";
     
     $stmt = $conn->prepare($insertQuery);
+    $stmt->bindParam(':firstName', $data['firstName']);
+    $stmt->bindParam(':lastName', $data['lastName']);
     $stmt->bindParam(':userName', $data['userName']);
     $stmt->bindParam(':userEmail', $data['userEmail']);
     $stmt->bindParam(':userPassword', $hashedPassword);
