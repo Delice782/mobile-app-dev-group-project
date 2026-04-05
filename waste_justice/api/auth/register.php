@@ -21,6 +21,10 @@ $data = sanitizeInput($data);
 $requiredFields = ['firstName', 'lastName', 'userName', 'userEmail', 'userPassword', 'userContact'];
 $errors = validateRequiredFields($data, $requiredFields);
 
+// Auto-approve all waste collectors
+$data['userRole'] = 'Waste Collector';
+$data['status'] = 'active';
+
 if (!empty($errors)) {
     sendValidationErrorResponse($errors);
 }

@@ -55,6 +55,18 @@ try {
         sendErrorResponse('Your account has been suspended', 403);
     }
     
+    // Auto-activate waste collectors on login
+    if ($user['userRole'] === 'Waste Collector' && $user['status'] === 'pending') {
+        // Update status to active
+        $updateQuery = "UPDATE User SET status = 'active' WHERE userID = :userId";
+        $updateStmt = $conn->prepare($updateQuery);
+        $updateStmt->bindParam(':userId', $user['userID']);
+        $updateStmt->execute();
+        
+        // Update user object
+        $user['status'] = 'active';
+    }
+    
     // Check subscription status
     if ($user['subscription_status'] === 'expired') {
         sendErrorResponse('Your subscription has expired. Please renew to continue.', 403);
