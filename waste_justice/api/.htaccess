@@ -3,7 +3,7 @@
 RewriteEngine On
 
 # Set the base directory
-RewriteBase /api/
+RewriteBase /~steve.nsabimana/api_v2/
 
 # Handle preflight OPTIONS requests
 RewriteCond %{REQUEST_METHOD} OPTIONS
@@ -45,5 +45,5 @@ RewriteRule ^(.*)$ $1.php [QSA,L]
 Options -Indexes
 
 # Custom error pages
-ErrorDocument 404 /api/index.php
-ErrorDocument 500 /api/index.php
+ErrorDocument 404 /~steve.nsabimana/api_v2/index.php
+ErrorDocument 500 /~steve.nsabimana/api_v2/index.php
