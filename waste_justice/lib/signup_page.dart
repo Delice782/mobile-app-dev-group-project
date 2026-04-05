@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -15,6 +17,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
 
   String? _errorMessage;
   String? _successMessage;
@@ -27,6 +30,7 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _contactController.dispose();
     super.dispose();
   }
 
@@ -41,15 +45,42 @@ class _SignupPageState extends State<SignupPage> {
       _successMessage = null;
     });
 
-    // Simulate a network request
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final response = await http.post(
+        Uri.parse('http://169.239.251.102:280/~steve.nsabimana/api_v2/auth/register.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+          'userEmail': _emailController.text.trim(),
+          'userPassword': _passwordController.text,
+          'userContact': _contactController.text.trim(),
+        }),
+      );
 
-    String fullName = "${_firstNameController.text} ${_lastNameController.text}";
+      final responseData = json.decode(response.body);
 
-    setState(() {
-      _isSubmitting = false;
-      _successMessage = "Account for $fullName created successfully!";
-    });
+      if (responseData['success'] == true) {
+        setState(() {
+          _isSubmitting = false;
+          _successMessage = 'Account created successfully! Please login.';
+        });
+
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pop();
+        });
+      } else {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = responseData['message'] ?? 'Registration failed';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = 'Network error. Please try again.';
+      });
+    }
   }
 
   @override
@@ -83,15 +114,9 @@ class _SignupPageState extends State<SignupPage> {
                   children: [
                     _buildHeader(theme),
                     const SizedBox(height: 16),
-
-                    if (_errorMessage != null)
-                      _buildAlert(_errorMessage!, true),
-
-                    if (_successMessage != null)
-                      _buildAlert(_successMessage!, false),
-
+                    if (_errorMessage != null) _buildAlert(_errorMessage!, true),
+                    if (_successMessage != null) _buildAlert(_successMessage!, false),
                     const SizedBox(height: 8),
-
                     Form(
                       key: _formKey,
                       child: Column(
@@ -99,6 +124,8 @@ class _SignupPageState extends State<SignupPage> {
                           _buildFirstNameField(),
                           const SizedBox(height: 16),
                           _buildLastNameField(),
+                          const SizedBox(height: 16),
+                          _buildContactField(),
                           const SizedBox(height: 16),
                           _buildEmailField(),
                           const SizedBox(height: 16),
@@ -110,7 +137,6 @@ class _SignupPageState extends State<SignupPage> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
                     _buildFooter(context),
                   ],
@@ -175,14 +201,10 @@ class _SignupPageState extends State<SignupPage> {
       decoration: InputDecoration(
         labelText: "First Name",
         prefixIcon: const Icon(Icons.person_outline),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your first name";
-        }
+        if (value == null || value.isEmpty) return "Please enter your first name";
         return null;
       },
     );
@@ -194,14 +216,28 @@ class _SignupPageState extends State<SignupPage> {
       decoration: InputDecoration(
         labelText: "Last Name",
         prefixIcon: const Icon(Icons.person_outline),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your last name";
-        }
+        if (value == null || value.isEmpty) return "Please enter your last name";
+        return null;
+      },
+    );
+  }
+
+  Widget _buildContactField() {
+    return TextFormField(
+      controller: _contactController,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        labelText: "Phone Number",
+        hintText: "+233XXXXXXXXX",
+        prefixIcon: const Icon(Icons.phone_outlined),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) return "Please enter your phone number";
+        if (!value.startsWith('+233')) return "Please use Ghana format (+233XXXXXXXXX)";
         return null;
       },
     );
@@ -210,20 +246,15 @@ class _SignupPageState extends State<SignupPage> {
   Widget _buildEmailField() {
     return TextFormField(
       controller: _emailController,
+      keyboardType: TextInputType.emailAddress,
       decoration: InputDecoration(
         labelText: "Email",
         prefixIcon: const Icon(Icons.email_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Enter your email";
-        }
-        if (!value.contains("@")) {
-          return "Invalid email";
-        }
+        if (value == null || value.isEmpty) return "Enter your email";
+        if (!value.contains("@")) return "Invalid email";
         return null;
       },
     );
@@ -236,14 +267,10 @@ class _SignupPageState extends State<SignupPage> {
       decoration: InputDecoration(
         labelText: "Password",
         prefixIcon: const Icon(Icons.lock_outline),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
       validator: (value) {
-        if (value == null || value.length < 6) {
-          return "Password must be at least 6 characters";
-        }
+        if (value == null || value.length < 6) return "Password must be at least 6 characters";
         return null;
       },
     );
@@ -256,14 +283,10 @@ class _SignupPageState extends State<SignupPage> {
       decoration: InputDecoration(
         labelText: "Confirm Password",
         prefixIcon: const Icon(Icons.lock_outline),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       ),
       validator: (value) {
-        if (value != _passwordController.text) {
-          return "Passwords do not match";
-        }
+        if (value != _passwordController.text) return "Passwords do not match";
         return null;
       },
     );
@@ -281,18 +304,16 @@ class _SignupPageState extends State<SignupPage> {
         child: _isSubmitting
             ? const CircularProgressIndicator(color: Colors.white)
             : const Text(
-          "Create Account",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+                "Create Account",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
       ),
     );
   }
 
   Widget _buildFooter(BuildContext context) {
     return TextButton(
-      onPressed: () {
-        Navigator.pop(context);
-      },
+      onPressed: () => Navigator.pop(context),
       child: const Text("Already have an account? Login"),
     );
   }

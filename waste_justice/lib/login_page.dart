@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'signup_page.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -34,16 +36,43 @@ class _LoginPageState extends State<LoginPage> {
       _successMessage = null;
     });
 
-    // TODO: Replace this simulated delay and validation with real API call
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Call the login API
+      final response = await http.post(
+        Uri.parse('http://169.239.251.102:280/~steve.nsabimana/api_v2/auth/login.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'userEmail': _emailController.text.trim(),
+          'userPassword': _passwordController.text,
+        }),
+      );
 
-    // Simple placeholder logic that always "fails" with an error message.
-    // When backend is ready, this should be replaced with real auth logic.
-    setState(() {
-      _isSubmitting = false;
-      _errorMessage = 'Invalid email or password. Please try again.';
-      _successMessage = null;
-    });
+      final responseData = json.decode(response.body);
+
+      if (responseData['success'] == true) {
+        setState(() {
+          _isSubmitting = false;
+          _successMessage = 'Login successful! Redirecting...';
+        });
+        
+        // Store token and user data
+        final token = responseData['data']['token'];
+        final user = responseData['data']['user'];
+        
+        // Navigate to dashboard
+        Navigator.of(context).pushReplacementNamed('/dashboard');
+      } else {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = responseData['message'] ?? 'Login failed';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = 'Network error. Please try again.';
+      });
+    }
   }
 
   @override
