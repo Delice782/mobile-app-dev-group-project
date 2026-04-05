@@ -1,7 +1,5 @@
   
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-=======
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,7 +7,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
->>>>>>> 09ed1922cd54e8bd2985e91a58f167f273c9c766
 import 'login_page.dart';
 import 'pages.dart';
 import 'home_page.dart';
@@ -603,8 +600,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-<<<<<<< HEAD
-  // buyers tab content
+// buyers tab content
   Widget _buildBuyersContent() {
     final List<Map<String, dynamic>> buyers = [
       {'name': 'EcoRecycle Ghana', 'location': 'Accra', 'rating': 4.8, 'active': true},
@@ -716,8 +712,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // earnings tab content
-=======
->>>>>>> 09ed1922cd54e8bd2985e91a58f167f273c9c766
   Widget _buildEarningsContent() {
     final List<Map<String, dynamic>> earnings = [
       {'date': '2024-03-12', 'weight': 8.5, 'amount': 8500, 'type': 'PET'},
