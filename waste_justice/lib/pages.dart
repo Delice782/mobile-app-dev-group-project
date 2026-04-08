@@ -30,6 +30,7 @@ class _LocationPageState extends State<LocationPage> {
       await [
         Permission.location,
         Permission.locationWhenInUse,
+        Permission.locationAlways,
       ].request();
 
       // Request microphone permission for speech-to-text
