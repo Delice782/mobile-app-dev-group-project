@@ -22,13 +22,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // only register background message handler on non-web platforms
-    if (!kIsWeb) {
+    // initialize Firebase only on secure contexts or mobile
+    if (kIsWeb) {
+      print('Running on web - Firebase may not work without HTTPS');
+      // Skip Firebase on HTTP web to prevent errors
+    } else {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     }
   } catch (e) {
@@ -41,8 +42,12 @@ void main() async {
   await Hive.openBox('wasteJusticeBox');
 
   try {
-    // initialize notification service
-    await NotificationService().init();
+    // initialize notification service only on mobile or secure web
+    if (!kIsWeb) {
+      await NotificationService().init();
+    } else {
+      print('Notifications disabled on HTTP web - requires HTTPS');
+    }
   } catch (e) {
     print('Notification service initialization error: $e');
     // Continue with app initialization even if notifications fail

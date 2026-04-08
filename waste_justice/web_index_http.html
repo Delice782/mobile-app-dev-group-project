@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Waste Justice - HTTP Version</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Disable service worker for HTTP -->
+  <script>
+    // Prevent service worker registration on HTTP
+    if ('serviceWorker' in navigator && location.protocol === 'http:') {
+      console.log('Service Worker disabled on HTTP - requires HTTPS');
+    }
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
