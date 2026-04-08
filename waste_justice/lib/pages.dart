@@ -47,78 +47,80 @@ class _LocationPageState extends State<LocationPage> {
     }
   }
 
-  Future<void> _requestLocationPermission() async {
+   Future<void> _requestLocationPermission() async {
+  setState(() {
+    _isLoading = true;
+    _locationStatus = 'Requesting location permission...';
+  });
+
+  try {
+    // On Android, request permissions manually first
+    if (!kIsWeb) {
+      await Permission.location.request();
+      await Permission.locationWhenInUse.request();
+    }
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showNotification(context, 'Location Services Disabled',
+          kIsWeb
+              ? 'Please enable location in your browser settings.'
+              : 'Please enable GPS in your phone settings.',
+          isError: true);
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location services disabled';
+      });
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      _showNotification(
+        context,
+        'Location Permission Required',
+        kIsWeb
+            ? 'Click the lock 🔒 in browser address bar → Location → Allow.'
+            : 'Please enable location permission in your phone App Settings.',
+        isError: true,
+      );
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location permission denied';
+      });
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
     setState(() {
-      _isLoading = true;
-      _locationStatus = 'Requesting location permission...';
+      _locationPermissionGranted = true;
+      _isLoading = false;
+      _locationStatus =
+          'Location: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
     });
 
-    // Request all permissions at once to prevent resets
-    await _requestAllPermissions();
+    _showNotification(context, 'Location Obtained',
+        'Your location has been successfully obtained.',
+        isError: false);
 
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _showNotification(context, 'Location Services Disabled',
-            'Please enable GPS/Location in your phone settings and try again.',
-            isError: true);
-        setState(() {
-          _isLoading = false;
-          _locationStatus = 'GPS/Location services disabled - enable in phone settings';
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showNotification(context, 'Permission Denied',
-              'Location permission is required to find nearest aggregators.',
-              isError: true);
-          setState(() {
-            _isLoading = false;
-            _locationStatus = 'Location permission denied';
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _showNotification(context, 'Permission Permanently Denied',
-            'Please enable location permission in app settings.',
-            isError: true);
-        setState(() {
-          _isLoading = false;
-          _locationStatus = 'Location permission permanently denied';
-        });
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _locationPermissionGranted = true;
-        _isLoading = false;
-        _locationStatus =
-        'Location obtained: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-      });
-
-      _showNotification(context, 'Location Obtained',
-          'Your location has been successfully obtained.',
-          isError: false);
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _locationStatus = 'Error getting location';
-      });
-      _showNotification(context, 'Location Error',
-          'Failed to get your location. Please try again.',
-          isError: true);
-    }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _locationStatus = 'Error getting location';
+    });
+    _showNotification(context, 'Location Error',
+        'Failed to get location. Please check your settings.',
+        isError: true);
   }
+}
 
   @override
   Widget build(BuildContext context) {
