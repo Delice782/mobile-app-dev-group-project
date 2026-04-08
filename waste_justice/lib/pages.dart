@@ -995,6 +995,19 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
             isError: true);
         return;
       }
+
+      // Check camera permission before accessing camera
+      var cameraStatus = await Permission.camera.status;
+      if (!cameraStatus.isGranted) {
+        var result = await Permission.camera.request();
+        if (!result.isGranted) {
+          _showNotification(context, 'Camera Permission Required',
+              'Camera permission is required to take photos. Please enable it in app settings.',
+              isError: true);
+          return;
+        }
+      }
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
           source: ImageSource.camera, imageQuality: 80);
@@ -1013,6 +1026,18 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
 
   Future<void> _pickImageFromGallery() async {
     try {
+      // Check storage permission before accessing gallery
+      var storageStatus = await Permission.storage.status;
+      if (!storageStatus.isGranted) {
+        var result = await Permission.storage.request();
+        if (!result.isGranted) {
+          _showNotification(context, 'Storage Permission Required',
+              'Storage permission is required to access photos. Please enable it in app settings.',
+              isError: true);
+          return;
+        }
+      }
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
           source: ImageSource.gallery, imageQuality: 80);
