@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,6 +7,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'contact_utils.dart';
+import 'services/speech_service.dart';
+import 'services/tts_service.dart';
+import 'services/vibration_service.dart';
+import 'widgets/mic_button.dart';
 
 
 // location page for getting user location and selecting aggregators
@@ -21,21 +26,45 @@ class _LocationPageState extends State<LocationPage> {
   bool _isLoading = false;
   String _locationStatus = 'Location not requested';
 
+  Future<void> _requestAllPermissions() async {
+    try {
+      // Request location permissions first
+      await [
+        Permission.location,
+        Permission.locationWhenInUse,
+      ].request();
+
+      // Request microphone permission for speech-to-text
+      await Permission.microphone.request();
+
+      // Request other permissions if needed
+      await [
+        Permission.camera,
+        Permission.storage,
+      ].request();
+    } catch (e) {
+      print('Permission request error: $e');
+    }
+  }
+
   Future<void> _requestLocationPermission() async {
     setState(() {
       _isLoading = true;
       _locationStatus = 'Requesting location permission...';
     });
 
+    // Request all permissions at once to prevent resets
+    await _requestAllPermissions();
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showNotification(context, 'Location Services Disabled',
-            'Please enable location services to find nearest aggregators.',
+            'Please enable GPS/Location in your phone settings and try again.',
             isError: true);
         setState(() {
           _isLoading = false;
-          _locationStatus = 'Location services disabled';
+          _locationStatus = 'GPS/Location services disabled - enable in phone settings';
         });
         return;
       }
