@@ -27,21 +27,23 @@ class _LocationPageState extends State<LocationPage> {
 
   Future<void> _requestAllPermissions() async {
     try {
-      // Request location permissions first
-      await [
-        Permission.location,
-        Permission.locationWhenInUse,
-        Permission.locationAlways,
-      ].request();
+      if (!kIsWeb) {
+        // Request location permissions first (Android only)
+        await [
+          Permission.location,
+          Permission.locationWhenInUse,
+          Permission.locationAlways,
+        ].request();
 
-      // Request microphone permission for speech-to-text
-      await Permission.microphone.request();
+        // Request microphone permission for speech-to-text (Android only)
+        await Permission.microphone.request();
 
-      // Request other permissions if needed
-      await [
-        Permission.camera,
-        Permission.storage,
-      ].request();
+        // Request other permissions if needed (Android only)
+        await [
+          Permission.camera,
+          Permission.storage,
+        ].request();
+      }
     } catch (e) {
       print('Permission request error: $e');
     }

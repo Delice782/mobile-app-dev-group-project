@@ -1,0 +1,24 @@
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Fix Font Manifest 403 Error
+<Files "FontManifest.json">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Content-Type "application/json"
+</Files>
+
+# Allow Flutter assets
+<Directory "assets">
+    Header set Access-Control-Allow-Origin "*"
+    Options +Indexes
+</Directory>
+
+# Service Worker Support
+<Files "flutter_service_worker.js">
+    Header set Service-Worker-Allowed "/"
+</Files>
+
+# Firebase Security Headers
+Header always set Content-Security-Policy "default-src 'self' https://www.gstatic.com; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firebase.googleapis.com https://firebaseio.com;"
