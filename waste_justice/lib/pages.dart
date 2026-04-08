@@ -6,10 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'contact_utils.dart';
-import 'services/speech_service.dart';
-import 'services/tts_service.dart';
-import 'services/vibration_service.dart';
-import 'widgets/mic_button.dart';
 
 
 // location page for getting user location and selecting aggregators
@@ -35,10 +31,7 @@ class _LocationPageState extends State<LocationPage> {
           Permission.locationAlways,
         ].request();
 
-        // Request microphone permission for speech-to-text (Android only)
-        await Permission.microphone.request();
-
-        // Request other permissions if needed (Android only)
+        // Request camera and storage permissions (Android only)
         await [
           Permission.camera,
           Permission.storage,
@@ -918,78 +911,20 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   bool _locationCaptured = false;
   final List<XFile> _selectedImages = [];
 
-  final SpeechService _speechService = SpeechService();
-  final TtsService _ttsService = TtsService();
-  final VibrationService _vibrationService = VibrationService();
-  String _liveSpeech = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_speechService.initialize());
-      unawaited(_ttsService.initialize());
-    });
   }
 
   @override
   void dispose() {
-    unawaited(_speechService.dispose());
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> _toggleMic() async {
-    final ok = await _speechService.initialize();
-    if (!mounted) return;
-    if (!ok) {
-      await _vibrationService.errorPattern();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Microphone or speech recognition is not available. Check permissions in Settings.',
-          ),
-        ),
-      );
-      return;
-    }
 
-    await _speechService.toggleListening(
-      onResult: (text, _) {
-        if (!mounted) return;
-        setState(() => _liveSpeech = text);
-      },
-    );
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _processVoiceInput() async {
-    final spoken = _liveSpeech.trim();
-    if (spoken.isEmpty) {
-      await _vibrationService.errorPattern();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No speech heard yet. Tap the mic and speak, then try again.'),
-        ),
-      );
-      return;
-    }
-
-    final existing = _notesController.text.trim();
-    _notesController.text =
-        existing.isEmpty ? spoken : '$existing\n$spoken';
-
-    await _vibrationService.successPulse();
-    if (!mounted) return;
-    await _ttsService.speakWasteRecordedSuccess();
-
-    if (!mounted) return;
-    setState(() {});
-  }
 
   Future<void> _captureImage() async {
     try {
@@ -1226,56 +1161,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                       style: TextStyle(color: Colors.red, fontSize: 12),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    const Text(
-                      'Voice input',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tap the microphone and speak the waste details (e.g., 2 plastic, 1 organic). '
-                      'If you prefer voice instead of typing, use the microphone.',
-                      style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.35),
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: MicButton(
-                        isListening: _speechService.isListening,
-                        onPressed: _toggleMic,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _liveSpeech.isEmpty ? '… listening text appears here' : _liveSpeech,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _liveSpeech.isEmpty ? Colors.grey.shade500 : Colors.black87,
-                        fontStyle:
-                            _liveSpeech.isEmpty ? FontStyle.italic : FontStyle.normal,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _processVoiceInput,
-                        icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('Process'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-
+                    
                     const SizedBox(height: 20),
 
                     // Photo buttons
