@@ -43,7 +43,11 @@ void main() async {
   try {
     // initialize notification service only on mobile or secure web
     if (!kIsWeb) {
+<<<<<<< HEAD
       await NotificationService.instance.init();
+=======
+      await NotificationService().init();
+>>>>>>> aba38a0e9b5c188f2c7b1f126409da3e0730f20a
     } else {
       print('Notifications disabled on HTTP web - requires HTTPS');
     }

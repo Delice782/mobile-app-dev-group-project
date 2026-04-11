@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'signup_page.dart';
+<<<<<<< HEAD
 import 'dashboard_page.dart';
 import 'api_config.dart';
 import 'offline_storage.dart';
+=======
+import 'main.dart';
+>>>>>>> aba38a0e9b5c188f2c7b1f126409da3e0730f20a
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -75,6 +79,14 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (context) => const DashboardPage()),
         );
         
+<<<<<<< HEAD
+=======
+        // Navigate to dashboard
+        Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const DashboardPage()),
+      );
+        
+>>>>>>> aba38a0e9b5c188f2c7b1f126409da3e0730f20a
       } else {
         setState(() {
           _isSubmitting = false;

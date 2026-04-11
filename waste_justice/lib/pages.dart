@@ -5,10 +5,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+<<<<<<< HEAD
 import 'api_service.dart';
 import 'dashboard_page.dart';
 import 'notification.dart';
 import 'offline_storage.dart';
+=======
+import 'contact_utils.dart';
+>>>>>>> aba38a0e9b5c188f2c7b1f126409da3e0730f20a
 
 /// Same pattern as web `views/collector/submit_waste.php`: typeName, GH₵/kg from DB, then description.
 String _plasticTypeDropdownLabel(
@@ -308,6 +312,7 @@ class _LocationPageState extends State<LocationPage> {
       desiredAccuracy: LocationAccuracy.high,
     );
 
+<<<<<<< HEAD
     setState(() {
       _locationPermissionGranted = true;
       _isLoading = false;
@@ -353,8 +358,103 @@ class _LocationPageState extends State<LocationPage> {
         e.toString().replaceFirst('Exception: ', ''),
         isError: true,
       );
+=======
+  Future<void> _requestAllPermissions() async {
+    try {
+      if (!kIsWeb) {
+        // Request location permissions first (Android only)
+        await [
+          Permission.location,
+          Permission.locationWhenInUse,
+          Permission.locationAlways,
+        ].request();
+
+        // Request camera and storage permissions (Android only)
+        await [
+          Permission.camera,
+          Permission.storage,
+        ].request();
+      }
+    } catch (e) {
+      print('Permission request error: $e');
+>>>>>>> aba38a0e9b5c188f2c7b1f126409da3e0730f20a
     }
   }
+
+   Future<void> _requestLocationPermission() async {
+  setState(() {
+    _isLoading = true;
+    _locationStatus = 'Requesting location permission...';
+  });
+
+  try {
+    // On Android, request permissions manually first
+    if (!kIsWeb) {
+      await Permission.location.request();
+      await Permission.locationWhenInUse.request();
+    }
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showNotification(context, 'Location Services Disabled',
+          kIsWeb
+              ? 'Please enable location in your browser settings.'
+              : 'Please enable GPS in your phone settings.',
+          isError: true);
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location services disabled';
+      });
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      _showNotification(
+        context,
+        'Location Permission Required',
+        kIsWeb
+            ? 'Click the lock 🔒 in browser address bar → Location → Allow.'
+            : 'Please enable location permission in your phone App Settings.',
+        isError: true,
+      );
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location permission denied';
+      });
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      _locationPermissionGranted = true;
+      _isLoading = false;
+      _locationStatus =
+          'Location: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+    });
+
+    _showNotification(context, 'Location Obtained',
+        'Your location has been successfully obtained.',
+        isError: false);
+
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _locationStatus = 'Error getting location';
+    });
+    _showNotification(context, 'Location Error',
+        'Failed to get location. Please check your settings.',
+        isError: true);
+  }
+}
 
   @override
   Widget build(BuildContext context) {
