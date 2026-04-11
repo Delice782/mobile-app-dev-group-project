@@ -3,13 +3,220 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'contact_utils.dart';
-import 'services/speech_service.dart';
-import 'services/tts_service.dart';
-import 'services/vibration_service.dart';
-import 'widgets/mic_button.dart';
+import 'api_service.dart';
+import 'dashboard_page.dart';
+import 'notification.dart';
+import 'offline_storage.dart';
 
+/// Same pattern as web `views/collector/submit_waste.php`: typeName, GH₵/kg from DB, then description.
+String _plasticTypeDropdownLabel(
+  Map<String, dynamic> type, {
+  int? aggregatorId,
+}) {
+  final typeName = type['typeName']?.toString() ?? '';
+  final description = type['description']?.toString().trim() ?? '';
+  final dynamic rawPrice = type['pricePerKg'];
+  final hasAggregator = aggregatorId != null && aggregatorId > 0;
+
+  final parts = <String>[typeName];
+  if (hasAggregator) {
+    if (rawPrice != null && rawPrice is num) {
+      parts.add('GH₵${rawPrice.toDouble().toStringAsFixed(2)}/kg');
+    } else {
+      parts.add('(No pricing set)');
+    }
+  }
+  if (description.isNotEmpty) {
+    parts.add(description);
+  }
+  return parts.join(' - ');
+}
+
+/// Aggregator info + per-kg prices, then opens [WasteTypePage] (in-app only, no calls).
+class AggregatorDetailPage extends StatefulWidget {
+  const AggregatorDetailPage({
+    super.key,
+    required this.aggregatorId,
+    required this.businessName,
+    required this.address,
+    this.latitude,
+    this.longitude,
+  });
+
+  final int aggregatorId;
+  final String businessName;
+  final String address;
+  final double? latitude;
+  final double? longitude;
+
+  @override
+  State<AggregatorDetailPage> createState() => _AggregatorDetailPageState();
+}
+
+class _AggregatorDetailPageState extends State<AggregatorDetailPage> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _types = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final types = await ApiService.getPlasticTypes(
+        aggregatorId: widget.aggregatorId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _types = types;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        title: const Text(
+          'Aggregator & prices',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: Colors.green.shade600,
+        elevation: 0,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.businessName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.address,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Prices are set by the aggregator. Submit through the app only — '
+                            'no calls or direct negotiation.',
+                            style: TextStyle(
+                              color: Colors.green.shade800,
+                              fontSize: 13,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                  const Text(
+                    'Pricing per kg at this site',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._types.map((t) {
+                    final name = t['typeName']?.toString() ?? '';
+                    final desc = t['description']?.toString() ?? '';
+                    final p = t['pricePerKg'];
+                    final priceStr = p is num
+                        ? 'GH₵${p.toDouble().toStringAsFixed(2)}/kg'
+                        : '(No pricing set)';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        title: Text(name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '$priceStr${desc.isNotEmpty ? '\n$desc' : ''}',
+                          style: const TextStyle(height: 1.3),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: widget.aggregatorId <= 0
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WasteTypePage(
+                                    aggregatorName: widget.businessName,
+                                    aggregatorAddress: widget.address,
+                                    aggregatorId: widget.aggregatorId,
+                                    latitude: widget.latitude,
+                                    longitude: widget.longitude,
+                                  ),
+                                ),
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text(
+                        'Open waste submission form',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
 
 // location page for getting user location and selecting aggregators
 class LocationPage extends StatefulWidget {
@@ -23,74 +230,129 @@ class _LocationPageState extends State<LocationPage> {
   bool _locationPermissionGranted = false;
   bool _isLoading = false;
   String _locationStatus = 'Location not requested';
+  double? _latitude;
+  double? _longitude;
+  List<Map<String, dynamic>> _aggregators = [];
 
-  Future<void> _requestLocationPermission() async {
+  Future<void> _requestAllPermissions() async {
+    try {
+      if (!kIsWeb) {
+        // Request location permissions first (Android only)
+        await [
+          Permission.location,
+          Permission.locationWhenInUse,
+          Permission.locationAlways,
+        ].request();
+
+        // Request camera and storage permissions (Android only)
+        await [
+          Permission.camera,
+          Permission.storage,
+        ].request();
+      }
+    } catch (e) {
+      print('Permission request error: $e');
+    }
+  }
+
+   Future<void> _requestLocationPermission() async {
+  setState(() {
+    _isLoading = true;
+    _locationStatus = 'Requesting location permission...';
+  });
+
+  try {
+    // On Android, request permissions manually first
+    if (!kIsWeb) {
+      await Permission.location.request();
+      await Permission.locationWhenInUse.request();
+    }
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showNotification(context, 'Location Services Disabled',
+          kIsWeb
+              ? 'Please enable location in your browser settings.'
+              : 'Please enable GPS in your phone settings.',
+          isError: true);
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location services disabled';
+      });
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      _showNotification(
+        context,
+        'Location Permission Required',
+        kIsWeb
+            ? 'Click the lock 🔒 in browser address bar → Location → Allow.'
+            : 'Please enable location permission in your phone App Settings.',
+        isError: true,
+      );
+      setState(() {
+        _isLoading = false;
+        _locationStatus = 'Location permission denied';
+      });
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
     setState(() {
-      _isLoading = true;
-      _locationStatus = 'Requesting location permission...';
+      _locationPermissionGranted = true;
+      _isLoading = false;
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+      _locationStatus =
+          'Location: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
     });
 
+    await _loadNearestAggregators();
+
+    _showNotification(context, 'Location Obtained',
+        'Your location has been successfully obtained.',
+        isError: false);
+
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+      _locationStatus = 'Error getting location';
+    });
+    _showNotification(context, 'Location Error',
+        'Failed to get location. Please check your settings.',
+        isError: true);
+  }
+}
+
+  Future<void> _loadNearestAggregators() async {
+    if (_latitude == null || _longitude == null) return;
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _showNotification(context, 'Location Services Disabled',
-            'Please enable location services to find nearest aggregators.',
-            isError: true);
-        setState(() {
-          _isLoading = false;
-          _locationStatus = 'Location services disabled';
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showNotification(context, 'Permission Denied',
-              'Location permission is required to find nearest aggregators.',
-              isError: true);
-          setState(() {
-            _isLoading = false;
-            _locationStatus = 'Location permission denied';
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _showNotification(context, 'Permission Permanently Denied',
-            'Please enable location permission in app settings.',
-            isError: true);
-        setState(() {
-          _isLoading = false;
-          _locationStatus = 'Location permission permanently denied';
-        });
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      final items = await ApiService.getNearestAggregators(
+        latitude: _latitude!,
+        longitude: _longitude!,
       );
-
+      if (!mounted) return;
       setState(() {
-        _locationPermissionGranted = true;
-        _isLoading = false;
-        _locationStatus =
-        'Location obtained: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        _aggregators = items;
       });
-
-      _showNotification(context, 'Location Obtained',
-          'Your location has been successfully obtained.',
-          isError: false);
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _locationStatus = 'Error getting location';
-      });
-      _showNotification(context, 'Location Error',
-          'Failed to get your location. Please try again.',
-          isError: true);
+      if (!mounted) return;
+      _showNotification(
+        context,
+        'Unable to load aggregators',
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
     }
   }
 
@@ -241,32 +503,28 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Widget _buildAggregatorList() {
-    final List<Map<String, dynamic>> aggregators = [
-      {
-        'name': 'uwdb',
-        'address': '1 University Avenue',
-        'contact': '+23354827397',
-        'distance': '0.5 km',
-        'active': true,
-      },
-      {
-        'name': 'EcoRecycle Ghana',
-        'address': '12 Industrial Area',
-        'contact': '+233555123456',
-        'distance': '2.3 km',
-        'active': true,
-      },
-      {
-        'name': 'Green Solutions Ltd',
-        'address': '8 Market Street',
-        'contact': '+233544987654',
-        'distance': '3.7 km',
-        'active': false,
-      },
-    ];
+    if (_aggregators.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          'No nearby aggregators found for your current location.',
+          style: TextStyle(color: Colors.grey.shade700),
+        ),
+      );
+    }
 
     return Column(
-      children: aggregators.map((aggregator) {
+      children: _aggregators.map((aggregator) {
+        final businessName =
+            (aggregator['businessName'] ?? aggregator['contactPerson'] ?? 'Aggregator')
+                .toString();
+        final address = (aggregator['address'] ?? 'No address').toString();
+        final distance = aggregator['distance']?.toString() ?? '';
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Container(
@@ -278,103 +536,49 @@ class _LocationPageState extends State<LocationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Name, address, contact, distance
-                Text(aggregator['name'],
+                Text(businessName,
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(aggregator['address'],
+                Text(address,
                     style: TextStyle(
                         color: Colors.grey.shade600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(aggregator['contact'],
-                    style: TextStyle(
-                        color: Colors.grey.shade600, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(aggregator['distance'],
+                Text(distance.isEmpty ? '' : '$distance km',
                     style: TextStyle(
                         color: Colors.green.shade600,
                         fontSize: 12,
                         fontWeight: FontWeight.w500)),
 
                 const SizedBox(height: 12),
-
-                // ── ACTION BUTTONS ──────────────────────────
-                Row(
-                  children: [
-                    // Call button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => ContactUtils.makeCall(
-                            context, aggregator['contact']),
-                        icon: const Icon(Icons.phone, size: 16),
-                        label: const Text('Call'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AggregatorDetailPage(
+                            aggregatorId:
+                                (aggregator['aggregatorID'] ?? 0) as int,
+                            businessName: businessName,
+                            address: address,
+                            latitude: _latitude,
+                            longitude: _longitude,
+                          ),
                         ),
-                      ),
+                      );
+                    },
+                    icon: const Icon(Icons.price_change_outlined, size: 20),
+                    label: const Text('View details & prices'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
-
-                    const SizedBox(width: 8),
-
-                    // SMS button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => ContactUtils.sendSms(
-                          context,
-                          aggregator['contact'],
-                          message:
-                          'Hi, I have waste ready for collection at your location.',
-                        ),
-                        icon: const Icon(Icons.sms, size: 16),
-                        label: const Text('SMS'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Select & Go button
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: aggregator['active']
-                            ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => WasteTypePage(
-                                aggregatorName: aggregator['name'],
-                                aggregatorAddress:
-                                aggregator['address'],
-                                aggregatorContact:
-                                aggregator['contact'],
-                              ),
-                            ),
-                          );
-                        }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: aggregator['active']
-                              ? Colors.green.shade600
-                              : Colors.grey.shade300,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Select',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -519,45 +723,15 @@ class AggregatorsPage extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 12),
-
-                    // ── CALL + SMS BUTTONS ──────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => ContactUtils.makeCall(
-                                context, aggregator['contact']),
-                            icon: const Icon(Icons.phone, size: 16),
-                            label: const Text('Call'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade600,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => ContactUtils.sendSms(
-                              context,
-                              aggregator['contact'],
-                              message:
-                              'Hi, I have waste ready for collection.',
-                            ),
-                            icon: const Icon(Icons.sms, size: 16),
-                            label: const Text('SMS'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade600,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Use “♻️ Upload Plastic Waste” on the dashboard to find '
+                      'subscribed aggregators by GPS and submit in-app (no calls).',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
                     ),
                   ],
                 ),
@@ -574,13 +748,17 @@ class AggregatorsPage extends StatelessWidget {
 class WasteTypePage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
-  final String aggregatorContact; // ← new param
+  final int aggregatorId;
+  final double? latitude;
+  final double? longitude;
 
   const WasteTypePage({
     super.key,
     required this.aggregatorName,
     required this.aggregatorAddress,
-    required this.aggregatorContact,
+    required this.aggregatorId,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -588,50 +766,259 @@ class WasteTypePage extends StatefulWidget {
 }
 
 class _WasteTypePageState extends State<WasteTypePage> {
-  String? _selectedWasteType;
+  int? _selectedPlasticTypeId;
   final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  List<Map<String, dynamic>> _plasticTypes = [];
+  bool _locationCaptured = false;
+  double? _capturedLatitude;
+  double? _capturedLongitude;
+  final List<XFile> _selectedImages = [];
 
-  final List<String> _wasteTypes = [
-    'PET (Water bottles)',
-    'HDPE (Milk jugs)',
-    'LDPE (Shopping bags)',
-    'PP (Yogurt containers)',
-    'Mixed plastics',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _weightController.addListener(_onWeightChanged);
+    _loadPlasticTypes();
+    _locationController.text = widget.aggregatorAddress;
+  }
 
-  void _proceedToFinalStep() {
+  void _onWeightChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _weightController.removeListener(_onWeightChanged);
+    _weightController.dispose();
+    _locationController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  double? _unitPriceForSelectedType() {
+    final id = _selectedPlasticTypeId;
+    if (id == null) return null;
+    for (final t in _plasticTypes) {
+      if (t['plasticTypeID'] == id) {
+        final p = t['pricePerKg'];
+        if (p is num) return p.toDouble();
+        return null;
+      }
+    }
+    return null;
+  }
+
+  String? _selectedPlasticTypeName() {
+    final id = _selectedPlasticTypeId;
+    if (id == null) return null;
+    for (final t in _plasticTypes) {
+      final tid = t['plasticTypeID'];
+      final match = tid == id || (tid is num && tid.toInt() == id);
+      if (match) return t['typeName']?.toString();
+    }
+    return null;
+  }
+
+  bool _isLikelyOfflineError(Object e) {
+    if (e is SocketException) return true;
+    final s = e.toString().toLowerCase();
+    return s.contains('failed host lookup') ||
+        s.contains('network is unreachable') ||
+        s.contains('connection refused') ||
+        s.contains('timed out') ||
+        s.contains('clientexception') ||
+        s.contains('connection reset');
+  }
+
+  Future<void> _loadPlasticTypes() async {
+    try {
+      final types = await ApiService.getPlasticTypes(
+        aggregatorId: widget.aggregatorId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _plasticTypes = types;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _showNotification(
+        context,
+        'Could not load plastic types',
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _captureImage() async {
+    try {
+      if (kIsWeb) {
+        _showNotification(context, 'Camera Not Available on Web',
+            'Please use the Gallery option to upload photos.',
+            isError: true);
+        return;
+      }
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+          source: ImageSource.camera, imageQuality: 80);
+      if (image != null) {
+        setState(() => _selectedImages.add(image));
+      }
+    } catch (_) {
+      _showNotification(context, 'Camera Error',
+          'Failed to capture photo. Please try again.',
+          isError: true);
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+          source: ImageSource.gallery, imageQuality: 80);
+      if (image != null) {
+        setState(() => _selectedImages.add(image));
+      }
+    } catch (_) {
+      _showNotification(context, 'Gallery Error',
+          'Failed to select photo. Please try again.',
+          isError: true);
+    }
+  }
+
+  void _removeImage(int index) => setState(() => _selectedImages.removeAt(index));
+
+  Future<void> _captureLocation() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _capturedLatitude = pos.latitude;
+        _capturedLongitude = pos.longitude;
+        _locationCaptured = true;
+        _locationController.text =
+            '${pos.latitude.toStringAsFixed(6)}, ${pos.longitude.toStringAsFixed(6)}';
+      });
+      _showNotification(context, 'Location Captured',
+          'Your GPS location has been captured.',
+          isError: false);
+    } catch (_) {
+      _showNotification(context, 'Location Error',
+          'Unable to capture GPS location now. Try again.',
+          isError: true);
+    }
+  }
+
+  Future<void> _submitWasteCollection() async {
     String errorMessage = '';
-    if (_selectedWasteType == null || _selectedWasteType!.isEmpty) {
-      errorMessage = 'Please select a waste type to proceed.';
+    if (_selectedPlasticTypeId == null) {
+      errorMessage = 'Please select a plastic type.';
     } else if (_weightController.text.isEmpty) {
-      errorMessage = 'Please enter the weight of your waste to proceed.';
+      errorMessage = 'Please enter the weight of your waste.';
     } else {
       final weight = double.tryParse(_weightController.text);
       if (weight == null || weight <= 0) {
         errorMessage = 'Please enter a valid weight greater than 0.';
-      } else if (weight < 25) {
+      } else if (weight < 5) {
         errorMessage =
-        'Sorry, minimum weight required is 25 KG. Please enter at least 25 KG to proceed.';
+        'Sorry, minimum weight required is 5 KG.';
       }
     }
+    if (!_locationCaptured) {
+      errorMessage = 'Please capture your location at the aggregator site.';
+    }
+    if (!kIsWeb && _selectedImages.isEmpty) {
+      errorMessage =
+          'Please add at least one photo as evidence (camera or gallery).';
+    }
 
-    if (errorMessage.isEmpty && _formKey.currentState!.validate()) {
-      Navigator.push(
+    if (errorMessage.isNotEmpty || !_formKey.currentState!.validate()) {
+      _showNotification(
         context,
+        'Required Information Missing',
+        errorMessage.isEmpty ? 'Please complete the form correctly.' : errorMessage,
+        isError: true,
+      );
+      return;
+    }
+
+    final weight = double.parse(_weightController.text.trim());
+    final lat = _capturedLatitude ?? widget.latitude ?? 0;
+    final lng = _capturedLongitude ?? widget.longitude ?? 0;
+    final loc = _locationController.text.trim();
+    final notes = _notesController.text.trim();
+
+    try {
+      String photoPath = '';
+      if (_selectedImages.isNotEmpty && !kIsWeb) {
+        final file = File(_selectedImages.first.path);
+        if (await file.exists()) {
+          photoPath = await ApiService.uploadCollectionPhoto(file);
+        }
+      }
+
+      await ApiService.submitCollection(
+        plasticTypeId: _selectedPlasticTypeId!,
+        weight: weight,
+        latitude: lat,
+        longitude: lng,
+        location: loc,
+        notes: notes,
+        photoPath: photoPath,
+        aggregatorId: widget.aggregatorId,
+      );
+      if (!kIsWeb) {
+        await NotificationService.instance.notifyWasteSubmissionSent(
+          weightKg: weight,
+          plasticTypeLabel: _selectedPlasticTypeName(),
+        );
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => FinalSubmissionPage(
-            aggregatorName: widget.aggregatorName,
-            aggregatorAddress: widget.aggregatorAddress,
-            aggregatorContact: widget.aggregatorContact, // ← pass through
-            wasteType: _selectedWasteType!,
-            weight: _weightController.text,
+          builder: (_) => const DashboardPage(
+            uploadSuccessMessage:
+                'Waste submitted successfully! An aggregator will review and accept your delivery.',
           ),
         ),
+        (route) => false,
       );
-    } else {
-      _showNotification(context, 'Required Information Missing', errorMessage,
-          isError: true);
+    } catch (e) {
+      if (!kIsWeb &&
+          _isLikelyOfflineError(e) &&
+          _selectedImages.isNotEmpty) {
+        await OfflineStorageService.enqueuePendingCollection({
+          'plasticTypeID': _selectedPlasticTypeId!,
+          'plasticTypeName': _selectedPlasticTypeName() ?? '',
+          'weight': weight,
+          'latitude': lat,
+          'longitude': lng,
+          'location': loc,
+          'notes': notes,
+          'aggregatorID': widget.aggregatorId,
+          'localPhotoPath': _selectedImages.first.path,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const DashboardPage(
+              uploadSuccessMessage:
+                  'Saved offline. We will send your submission when you are back online.',
+            ),
+          ),
+          (route) => false,
+        );
+        return;
+      }
+      _showNotification(
+        context,
+        'Submission Failed',
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
     }
   }
 
@@ -640,7 +1027,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
     return Scaffold(
       backgroundColor: Colors.green.shade50,
       appBar: AppBar(
-        title: const Text('Select Waste Type',
+        title: const Text('Submit Waste',
             style: TextStyle(
                 fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.green.shade600,
@@ -673,46 +1060,25 @@ class _WasteTypePageState extends State<WasteTypePage> {
                           fontWeight: FontWeight.bold,
                           color: Colors.black87)),
                   const SizedBox(height: 8),
-                  Text(widget.aggregatorName,
+                  Text('Business: ${widget.aggregatorName}',
                       style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w600)),
-                  Text(widget.aggregatorAddress,
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Address: ${widget.aggregatorAddress}',
                       style: TextStyle(
                           color: Colors.grey.shade600, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'All communication goes through the app — no calls to the aggregator.',
+                    style: TextStyle(color: Colors.green.shade800, fontSize: 12),
+                  ),
                   const SizedBox(height: 12),
-                  // Quick call/sms from this page too
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => ContactUtils.makeCall(
-                            context, widget.aggregatorContact),
-                        icon: const Icon(Icons.phone, size: 14),
-                        label: const Text('Call'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => ContactUtils.sendSms(
-                          context,
-                          widget.aggregatorContact,
-                          message:
-                          'Hi, I am on my way with waste for collection.',
-                        ),
-                        icon: const Icon(Icons.sms, size: 14),
-                        label: const Text('SMS'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.swap_horiz, size: 16),
+                      label: const Text('Change aggregator'),
+                    ),
                   ),
                 ],
               ),
@@ -738,30 +1104,64 @@ class _WasteTypePageState extends State<WasteTypePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Waste Information',
+                    const Text('Step 3: Submit Waste at Aggregator Location',
                         style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You selected ${widget.aggregatorName}. Capture your GPS location and submit your waste collection.',
+                      style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                    ),
                     const SizedBox(height: 20),
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedWasteType,
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      value: _selectedPlasticTypeId,
                       decoration: InputDecoration(
-                        labelText: 'Select Plastic Type',
+                        labelText: 'Plastic Type *',
+                        helperText:
+                            '(Select the type of plastic you collected)',
+                        hintText: '-- Select plastic type --',
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8)),
                         prefixIcon: const Icon(Icons.category),
                       ),
-                      items: _wasteTypes.map((String type) {
-                        return DropdownMenuItem<String>(
-                            value: type, child: Text(type));
+                      selectedItemBuilder: (context) {
+                        return _plasticTypes.map((type) {
+                          final label = _plasticTypeDropdownLabel(
+                            type,
+                            aggregatorId: widget.aggregatorId,
+                          );
+                          return Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              label,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList();
+                      },
+                      items: _plasticTypes.map((type) {
+                        final label = _plasticTypeDropdownLabel(
+                          type,
+                          aggregatorId: widget.aggregatorId,
+                        );
+                        return DropdownMenuItem<int>(
+                          value: type['plasticTypeID'] as int,
+                          child: Text(
+                            label,
+                            softWrap: true,
+                            maxLines: 5,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
                       }).toList(),
-                      onChanged: (String? value) =>
-                          setState(() => _selectedWasteType = value),
+                      onChanged: (int? value) =>
+                          setState(() => _selectedPlasticTypeId = value),
                       validator: (value) =>
-                      (value == null || value.isEmpty)
-                          ? 'Please select a waste type'
-                          : null,
+                      value == null ? 'Please select a waste type' : null,
                     ),
                     const SizedBox(height: 20),
                     Container(
@@ -778,7 +1178,7 @@ class _WasteTypePageState extends State<WasteTypePage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Minimum weight requirement: 25 KG.',
+                              'Minimum weight requirement: 5 KG.',
                               style: TextStyle(
                                   color: Colors.orange.shade800,
                                   fontSize: 14,
@@ -793,8 +1193,8 @@ class _WasteTypePageState extends State<WasteTypePage> {
                       controller: _weightController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: 'Weight (KG)',
-                        hintText: 'Minimum: 25 KG',
+                        labelText: 'Weight (kg) *',
+                        hintText: 'e.g., 25.50',
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8)),
                         prefixIcon: const Icon(Icons.scale),
@@ -807,25 +1207,180 @@ class _WasteTypePageState extends State<WasteTypePage> {
                         if (weight == null || weight <= 0) {
                           return 'Please enter a valid weight';
                         }
-                        if (weight < 25) {
-                          return 'Minimum weight is 25 KG';
+                        if (weight < 5) {
+                          return 'Minimum weight is 5 KG';
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 12),
+                    Builder(
+                      builder: (context) {
+                        final unit = _unitPriceForSelectedType();
+                        final w =
+                            double.tryParse(_weightController.text.trim());
+                        final total = (unit != null && w != null && w >= 5)
+                            ? unit * w
+                            : null;
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '💰 Estimated payout (aggregator rate × weight)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade900,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              if (unit == null)
+                                Text(
+                                  'Select a plastic type with a set price to see an estimate.',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13,
+                                  ),
+                                )
+                              else if (w == null || w < 5)
+                                Text(
+                                  'Enter weight (≥ 5 kg) to calculate.',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13,
+                                  ),
+                                )
+                              else if (total != null)
+                                Text(
+                                  'GH₵${unit.toStringAsFixed(2)}/kg × ${w.toStringAsFixed(2)} kg = '
+                                  'GH₵${total.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green.shade900,
+                                  ),
+                                )
+                              else
+                                const SizedBox.shrink(),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tip: Use a scale to get accurate weight for better pricing.',
+                      style: TextStyle(color: Colors.green.shade800, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _locationController,
+                      readOnly: true,
+                      decoration: InputDecoration(
+                        labelText: 'Current Location at Aggregator *',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        prefixIcon: const Icon(Icons.location_on),
+                        suffixIcon: TextButton(
+                          onPressed: _captureLocation,
+                          child: const Text('Capture'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Important: Click "Capture" to verify you are at the aggregator location.',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      kIsWeb ? 'Upload Photo (optional on web)' : 'Evidence photo *',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      kIsWeb
+                          ? 'On mobile, a photo is required before submit.'
+                          : 'Required on this device. Max 5MB, JPG/PNG/WEBP.',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _captureImage,
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Camera'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _pickImageFromGallery,
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Gallery'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_selectedImages.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text('${_selectedImages.length} photo(s) selected',
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                    ],
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Additional Notes (Optional)',
+                        hintText:
+                            'e.g., Clean and sorted, collected from beach cleanup...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: const Text(
+                        'What Happens Next?\n'
+                        '• Submit your waste collection with accurate details\n'
+                        '• Aggregator reviews and accepts your delivery\n'
+                        '• You receive payment after acceptance\n'
+                        '• Leave feedback about your experience',
+                        style: TextStyle(fontSize: 13, height: 1.4),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _proceedToFinalStep,
+                        onPressed: _submitWasteCollection,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green.shade600,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Proceed to Final Step',
+                        child: const Text('Submit Waste Collection at This Location',
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold)),
@@ -864,17 +1419,21 @@ class _WasteTypePageState extends State<WasteTypePage> {
 class FinalSubmissionPage extends StatefulWidget {
   final String aggregatorName;
   final String aggregatorAddress;
-  final String aggregatorContact; // ← new param
   final String wasteType;
+  final int plasticTypeId;
   final String weight;
+  final double? latitude;
+  final double? longitude;
 
   const FinalSubmissionPage({
     super.key,
     required this.aggregatorName,
     required this.aggregatorAddress,
-    required this.aggregatorContact,
     required this.wasteType,
+    required this.plasticTypeId,
     required this.weight,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -886,80 +1445,24 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   final TextEditingController _notesController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _locationCaptured = false;
+  double? _capturedLatitude;
+  double? _capturedLongitude;
   final List<XFile> _selectedImages = [];
 
-  final SpeechService _speechService = SpeechService();
-  final TtsService _ttsService = TtsService();
-  final VibrationService _vibrationService = VibrationService();
-  String _liveSpeech = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_speechService.initialize());
-      unawaited(_ttsService.initialize());
-    });
   }
 
   @override
   void dispose() {
-    unawaited(_speechService.dispose());
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> _toggleMic() async {
-    final ok = await _speechService.initialize();
-    if (!mounted) return;
-    if (!ok) {
-      await _vibrationService.errorPattern();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Microphone or speech recognition is not available. Check permissions in Settings.',
-          ),
-        ),
-      );
-      return;
-    }
 
-    await _speechService.toggleListening(
-      onResult: (text, _) {
-        if (!mounted) return;
-        setState(() => _liveSpeech = text);
-      },
-    );
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _processVoiceInput() async {
-    final spoken = _liveSpeech.trim();
-    if (spoken.isEmpty) {
-      await _vibrationService.errorPattern();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No speech heard yet. Tap the mic and speak, then try again.'),
-        ),
-      );
-      return;
-    }
-
-    final existing = _notesController.text.trim();
-    _notesController.text =
-        existing.isEmpty ? spoken : '$existing\n$spoken';
-
-    await _vibrationService.successPulse();
-    if (!mounted) return;
-    await _ttsService.speakWasteRecordedSuccess();
-
-    if (!mounted) return;
-    setState(() {});
-  }
 
   Future<void> _captureImage() async {
     try {
@@ -969,6 +1472,19 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
             isError: true);
         return;
       }
+
+      // Check camera permission before accessing camera
+      var cameraStatus = await Permission.camera.status;
+      if (!cameraStatus.isGranted) {
+        var result = await Permission.camera.request();
+        if (!result.isGranted) {
+          _showNotification(context, 'Camera Permission Required',
+              'Camera permission is required to take photos. Please enable it in app settings.',
+              isError: true);
+          return;
+        }
+      }
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
           source: ImageSource.camera, imageQuality: 80);
@@ -987,6 +1503,18 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
 
   Future<void> _pickImageFromGallery() async {
     try {
+      // Check storage permission before accessing gallery
+      var storageStatus = await Permission.storage.status;
+      if (!storageStatus.isGranted) {
+        var result = await Permission.storage.request();
+        if (!result.isGranted) {
+          _showNotification(context, 'Storage Permission Required',
+              'Storage permission is required to access photos. Please enable it in app settings.',
+              isError: true);
+          return;
+        }
+      }
+
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
           source: ImageSource.gallery, imageQuality: 80);
@@ -1006,25 +1534,63 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
   void _removeImage(int index) =>
       setState(() => _selectedImages.removeAt(index));
 
-  void _captureLocation() {
-    setState(() {
-      _locationCaptured = true;
-      _locationController.text =
-      'Location captured: ${DateTime.now().toString().substring(0, 19)}';
-    });
-    _showNotification(context, 'Location Captured',
-        'Your location has been successfully verified.',
-        isError: false);
+  Future<void> _captureLocation() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _capturedLatitude = pos.latitude;
+        _capturedLongitude = pos.longitude;
+        _locationCaptured = true;
+        _locationController.text =
+            '${pos.latitude.toStringAsFixed(6)}, ${pos.longitude.toStringAsFixed(6)}';
+      });
+      _showNotification(context, 'Location Captured',
+          'Your GPS location has been successfully verified.',
+          isError: false);
+    } catch (_) {
+      _showNotification(context, 'Location Error',
+          'Unable to capture GPS location now. Try again.',
+          isError: true);
+    }
   }
 
-  void _submitWasteCollection() {
+  Future<void> _submitWasteCollection() async {
     if (_formKey.currentState!.validate() && _locationCaptured) {
-      _showNotification(context, 'Submission Successful',
-          'Your waste collection has been submitted successfully!',
-          isError: false);
-      Future.delayed(const Duration(seconds: 2), () {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      });
+      try {
+        await ApiService.submitCollection(
+          plasticTypeId: widget.plasticTypeId,
+          weight: double.parse(widget.weight),
+          latitude: _capturedLatitude ?? widget.latitude ?? 0,
+          longitude: _capturedLongitude ?? widget.longitude ?? 0,
+          location: _locationController.text,
+          notes: _notesController.text.trim(),
+        );
+        if (!kIsWeb) {
+          await NotificationService.instance.notifyWasteSubmissionSent(
+            weightKg: double.tryParse(widget.weight),
+            plasticTypeLabel: widget.wasteType,
+          );
+        }
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const DashboardPage(
+              uploadSuccessMessage:
+                  'Waste submitted successfully! An aggregator will review and accept your delivery.',
+            ),
+          ),
+          (route) => false,
+        );
+      } catch (e) {
+        _showNotification(
+          context,
+          'Submission Failed',
+          e.toString().replaceFirst('Exception: ', ''),
+          isError: true,
+        );
+      }
     } else if (!_locationCaptured) {
       _showNotification(context, 'Location Required',
           'Please capture your location before submitting.',
@@ -1073,46 +1639,10 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                   const SizedBox(height: 8),
                   Text('Type: ${widget.wasteType}'),
                   Text('Weight: ${widget.weight} KG'),
-
-                  const SizedBox(height: 16),
-
-                  // ── CALL + SMS AGGREGATOR ─────────────────
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => ContactUtils.makeCall(
-                              context, widget.aggregatorContact),
-                          icon: const Icon(Icons.phone, size: 16),
-                          label: const Text('Call Aggregator'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => ContactUtils.sendSms(
-                            context,
-                            widget.aggregatorContact,
-                            message:
-                            'I am at your location with ${widget.weight}kg of ${widget.wasteType}.',
-                          ),
-                          icon: const Icon(Icons.sms, size: 16),
-                          label: const Text('SMS Aggregator'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange.shade600,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'Complete submission in the app only — no direct calls to the aggregator.',
+                    style: TextStyle(color: Colors.green.shade800, fontSize: 12),
                   ),
                 ],
               ),
@@ -1171,56 +1701,7 @@ class _FinalSubmissionPageState extends State<FinalSubmissionPage> {
                       style: TextStyle(color: Colors.red, fontSize: 12),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    const Text(
-                      'Voice input',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tap the microphone and speak the waste details (e.g., 2 plastic, 1 organic). '
-                      'If you prefer voice instead of typing, use the microphone.',
-                      style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.35),
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: MicButton(
-                        isListening: _speechService.isListening,
-                        onPressed: _toggleMic,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _liveSpeech.isEmpty ? '… listening text appears here' : _liveSpeech,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _liveSpeech.isEmpty ? Colors.grey.shade500 : Colors.black87,
-                        fontStyle:
-                            _liveSpeech.isEmpty ? FontStyle.italic : FontStyle.normal,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _processVoiceInput,
-                        icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('Process'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-
+                    
                     const SizedBox(height: 20),
 
                     // Photo buttons

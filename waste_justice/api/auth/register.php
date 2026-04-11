@@ -18,8 +18,19 @@ $data = getJsonInput();
 $data = sanitizeInput($data);
 
 // Validate required fields
-$requiredFields = ['firstName', 'lastName', 'userName', 'userEmail', 'userPassword', 'userContact'];
+$requiredFields = ['userEmail', 'userPassword', 'userContact'];
 $errors = validateRequiredFields($data, $requiredFields);
+
+// Accept either userName directly OR firstName + lastName from older/newer clients.
+if (empty($data['userName'])) {
+    $first = isset($data['firstName']) ? trim($data['firstName']) : '';
+    $last = isset($data['lastName']) ? trim($data['lastName']) : '';
+    $data['userName'] = trim($first . ' ' . $last);
+}
+
+if (empty($data['userName'])) {
+    $errors['userName'] = 'User name is required';
+}
 
 // Auto-approve all waste collectors
 $data['userRole'] = 'Waste Collector';
@@ -71,17 +82,44 @@ try {
     // Hash password
     $hashedPassword = password_hash($data['userPassword'], PASSWORD_DEFAULT);
     
-    // Insert new waste collector
-    $insertQuery = "INSERT INTO User (firstName, lastName, userName, userEmail, userPassword, userContact, userRole, status, subscription_status) 
-                    VALUES (:firstName, :lastName, :userName, :userEmail, :userPassword, :userContact, 'Waste Collector', 'active', 'free')";
-    
+    // Insert new waste collector.
+    // Supports both schemas:
+    // 1) User table with firstName/lastName columns
+    // 2) User table with userName only (as in your shared database_schema.sql)
+    $hasFirstName = false;
+    $hasLastName = false;
+
+    $columnsStmt = $conn->query("SHOW COLUMNS FROM `User`");
+    $userColumns = $columnsStmt ? $columnsStmt->fetchAll(PDO::FETCH_COLUMN, 0) : [];
+    $hasFirstName = in_array('firstName', $userColumns, true);
+    $hasLastName = in_array('lastName', $userColumns, true);
+
+    $insertColumns = ['userName', 'userEmail', 'userPassword', 'userContact', 'userRole', 'status', 'subscription_status'];
+    $insertValues = [':userName', ':userEmail', ':userPassword', ':userContact', "'Waste Collector'", "'active'", "'free'"];
+
+    if ($hasFirstName) {
+        $insertColumns[] = 'firstName';
+        $insertValues[] = ':firstName';
+    }
+    if ($hasLastName) {
+        $insertColumns[] = 'lastName';
+        $insertValues[] = ':lastName';
+    }
+
+    $insertQuery = "INSERT INTO User (" . implode(', ', $insertColumns) . ")
+                    VALUES (" . implode(', ', $insertValues) . ")";
+
     $stmt = $conn->prepare($insertQuery);
-    $stmt->bindParam(':firstName', $data['firstName']);
-    $stmt->bindParam(':lastName', $data['lastName']);
-    $stmt->bindParam(':userName', $data['userName']);
-    $stmt->bindParam(':userEmail', $data['userEmail']);
-    $stmt->bindParam(':userPassword', $hashedPassword);
-    $stmt->bindParam(':userContact', $data['userContact']);
+    $stmt->bindValue(':userName', $data['userName']);
+    $stmt->bindValue(':userEmail', $data['userEmail']);
+    $stmt->bindValue(':userPassword', $hashedPassword);
+    $stmt->bindValue(':userContact', $data['userContact']);
+    if ($hasFirstName) {
+        $stmt->bindValue(':firstName', isset($data['firstName']) ? $data['firstName'] : '');
+    }
+    if ($hasLastName) {
+        $stmt->bindValue(':lastName', isset($data['lastName']) ? $data['lastName'] : '');
+    }
     
     if ($stmt->execute()) {
         $userId = $conn->lastInsertId();

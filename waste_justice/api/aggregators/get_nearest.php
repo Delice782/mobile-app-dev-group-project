@@ -45,7 +45,8 @@ try {
     $database = new Database();
     $conn = $database->getConnection();
     
-    // Build query to find nearest aggregators with pricing
+    // Match web collector behavior: return subscribed aggregators and sort by distance.
+    // Do not hard-limit by radius so collectors still see available aggregators.
     $query = "
         SELECT 
             u.userID as aggregatorID,
@@ -58,38 +59,28 @@ try {
             u.totalRatings,
             ar.businessName,
             ar.capacity,
-            pt.plasticTypeID,
-            pt.typeName as plasticType,
-            ap.pricePerKg,
-            (6371 * acos(cos(radians(:latitude)) * cos(radians(u.latitude)) * 
-             cos(radians(u.longitude) - radians(:longitude)) + sin(radians(:latitude)) * 
+            (6371 * acos(cos(radians(:latitude1)) * cos(radians(u.latitude)) * 
+             cos(radians(u.longitude) - radians(:longitude)) + sin(radians(:latitude2)) * 
              sin(radians(u.latitude)))) AS distance
         FROM User u
         JOIN AggregatorRegistration ar ON u.userID = ar.userID
-        JOIN AggregatorPricing ap ON u.userID = ap.aggregatorID
-        JOIN PlasticType pt ON ap.plasticTypeID = pt.plasticTypeID
         INNER JOIN Subscriptions s ON u.userID = s.userID
         WHERE u.userRole = 'Aggregator' 
         AND u.status = 'active' 
-        AND ap.isActive = TRUE
+        AND u.address IS NOT NULL
+        AND u.address != ''
+        AND TRIM(u.address) != ''
         AND s.paymentStatus = 'Success'
         AND s.isActive = TRUE
         AND (s.subscriptionEnd IS NULL OR s.subscriptionEnd >= CURDATE())
-        HAVING distance <= :radius
-        ORDER BY distance, ap.pricePerKg DESC
     ";
     
     $params = [
-        ':latitude' => $latitude,
+        ':latitude1' => $latitude,
+        ':latitude2' => $latitude,
         ':longitude' => $longitude,
-        ':radius' => $radius
     ];
-    
-    // Filter by plastic type if specified
-    if ($plasticTypeID) {
-        $query .= " AND pt.plasticTypeID = :plasticTypeID";
-        $params[':plasticTypeID'] = $plasticTypeID;
-    }
+    $query .= " ORDER BY CASE WHEN u.latitude IS NOT NULL AND u.longitude IS NOT NULL THEN 0 ELSE 1 END, distance ASC, u.userName";
     
     $stmt = $conn->prepare($query);
     
@@ -117,11 +108,7 @@ try {
             'rating' => (float)$aggregator['rating'],
             'totalRatings' => (int)$aggregator['totalRatings'],
             'capacity' => (float)$aggregator['capacity'],
-            'pricing' => [
-                'plasticTypeID' => (int)$aggregator['plasticTypeID'],
-                'plasticType' => $aggregator['plasticType'],
-                'pricePerKg' => (float)$aggregator['pricePerKg']
-            ]
+            'pricing' => null
         ];
     }
     

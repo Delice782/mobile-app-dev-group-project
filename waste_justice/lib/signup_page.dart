@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'api_config.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -47,11 +48,13 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://169.239.251.102:280/~steve.nsabimana/api_v2/auth/register.php'),
+        Uri.parse(ApiConfig.auth('register.php')),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'firstName': _firstNameController.text.trim(),
           'lastName': _lastNameController.text.trim(),
+          'userName':
+              '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
           'userEmail': _emailController.text.trim(),
           'userPassword': _passwordController.text,
           'userContact': _contactController.text.trim(),

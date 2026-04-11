@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'signup_page.dart';
+import 'dashboard_page.dart';
+import 'api_config.dart';
+import 'offline_storage.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -39,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       // Call the login API
       final response = await http.post(
-        Uri.parse('http://169.239.251.102:280/~steve.nsabimana/api_v2/auth/login.php'),
+        Uri.parse(ApiConfig.auth('login.php')),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'userEmail': _emailController.text.trim(),
@@ -57,10 +60,21 @@ class _LoginPageState extends State<LoginPage> {
         
         // Store token and user data
         final token = responseData['data']['token'];
-        final user = responseData['data']['user'];
+        final user = responseData['data']['user'] as Map<String, dynamic>;
+        final displayName = user['userName']?.toString().trim();
+        await OfflineStorageService.saveUserCredentials(
+          user['userID'].toString(),
+          token.toString(),
+          userName: (displayName != null && displayName.isNotEmpty)
+              ? displayName
+              : null,
+        );
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DashboardPage()),
+        );
         
-        // Navigate to dashboard
-        Navigator.of(context).pushReplacementNamed('/dashboard');
       } else {
         setState(() {
           _isSubmitting = false;

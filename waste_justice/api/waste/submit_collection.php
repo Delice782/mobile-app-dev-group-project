@@ -55,42 +55,83 @@ if (!is_numeric($data['longitude']) || $data['longitude'] < -180 || $data['longi
 try {
     $database = new Database();
     $conn = $database->getConnection();
-    
+    if ($conn === null) {
+        sendServerErrorResponse('Database connection failed');
+    }
+
+    $plasticTypeID = (int) $data['plasticTypeID'];
+
     // Check if plastic type exists
     $checkPlasticQuery = "SELECT plasticTypeID, typeName FROM PlasticType WHERE plasticTypeID = :plasticTypeID";
     $stmt = $conn->prepare($checkPlasticQuery);
-    $stmt->bindParam(':plasticTypeID', $data['plasticTypeID']);
+    $stmt->bindValue(':plasticTypeID', $plasticTypeID, PDO::PARAM_INT);
     $stmt->execute();
-    
+
     if ($stmt->rowCount() === 0) {
         sendValidationErrorResponse(['plasticTypeID' => 'Invalid plastic type']);
     }
-    
-    $plasticType = $stmt->fetch();
-    
+
+    $weight = (float) $data['weight'];
+    $latitude = (float) $data['latitude'];
+    $longitude = (float) $data['longitude'];
+    $location = (string) ($data['location'] ?? '');
+    $notes = (string) ($data['notes'] ?? '');
+    $photoPath = (string) ($data['photoPath'] ?? '');
+
+    $aggregatorID = null;
+    if (!empty($data['aggregatorID'])) {
+        $aggregatorID = (int) $data['aggregatorID'];
+        $aggCheck = $conn->prepare("
+            SELECT u.userID 
+            FROM User u
+            INNER JOIN Subscriptions s ON u.userID = s.userID
+            WHERE u.userID = :aid 
+            AND u.userRole = 'Aggregator' 
+            AND u.status = 'active'
+            AND s.paymentStatus = 'Success'
+            AND s.isActive = 1
+            AND (s.subscriptionEnd IS NULL OR s.subscriptionEnd >= CURDATE())
+            LIMIT 1
+        ");
+        $aggCheck->bindValue(':aid', $aggregatorID, PDO::PARAM_INT);
+        $aggCheck->execute();
+        if ($aggCheck->rowCount() === 0) {
+            sendValidationErrorResponse(['aggregatorID' => 'Invalid aggregator or subscription not active']);
+        }
+    }
+
     // Generate unique hash to prevent duplicates
-    $hashData = $currentUser['user_id'] . $data['plasticTypeID'] . $data['weight'] . $data['latitude'] . $data['longitude'] . time();
+    $hashData = $currentUser['user_id'] . $plasticTypeID . $weight . $latitude . $longitude . time();
     $hash = hash('sha256', $hashData);
-    
-    // Insert waste collection
-    $insertQuery = "INSERT INTO WasteCollection 
-                    (collectorID, plasticTypeID, weight, latitude, longitude, location, notes, photoPath, hash, statusID) 
-                    VALUES (:collectorID, :plasticTypeID, :weight, :latitude, :longitude, :location, :notes, :photoPath, :hash, 1)";
-    
+
+    // Insert waste collection (optional aggregatorID — same as web upload_waste_action)
+    $columns = 'collectorID, plasticTypeID, weight, latitude, longitude, location, notes, photoPath, hash, statusID';
+    $placeholders = ':collectorID, :plasticTypeID, :weight, :latitude, :longitude, :location, :notes, :photoPath, :hash, 1';
+    if ($aggregatorID !== null) {
+        $columns .= ', aggregatorID';
+        $placeholders .= ', :aggregatorID';
+    }
+
+    $insertQuery = "INSERT INTO WasteCollection ($columns) VALUES ($placeholders)";
+
     $stmt = $conn->prepare($insertQuery);
-    $stmt->bindParam(':collectorID', $currentUser['user_id']);
-    $stmt->bindParam(':plasticTypeID', $data['plasticTypeID']);
-    $stmt->bindParam(':weight', $data['weight']);
-    $stmt->bindParam(':latitude', $data['latitude']);
-    $stmt->bindParam(':longitude', $data['longitude']);
-    $stmt->bindParam(':location', $data['location'] ?? '');
-    $stmt->bindParam(':notes', $data['notes'] ?? '');
-    $stmt->bindParam(':photoPath', $data['photoPath'] ?? '');
+    $collectorId = (int) $currentUser['user_id'];
+    $stmt->bindValue(':collectorID', $collectorId, PDO::PARAM_INT);
+    $stmt->bindValue(':plasticTypeID', $plasticTypeID, PDO::PARAM_INT);
+    $stmt->bindValue(':weight', $weight);
+    $stmt->bindValue(':latitude', $latitude);
+    $stmt->bindValue(':longitude', $longitude);
+    $stmt->bindParam(':location', $location);
+    $stmt->bindParam(':notes', $notes);
+    $stmt->bindParam(':photoPath', $photoPath);
     $stmt->bindParam(':hash', $hash);
-    
+    if ($aggregatorID !== null) {
+        $stmt->bindValue(':aggregatorID', $aggregatorID, PDO::PARAM_INT);
+    }
+
     if ($stmt->execute()) {
         $collectionId = $conn->lastInsertId();
-        
+
         // Get collection details for response
         $getCollectionQuery = "
             SELECT wc.collectionID, wc.weight, wc.collectionDate, wc.latitude, wc.longitude, 
@@ -102,13 +143,17 @@ try {
             JOIN Status s ON wc.statusID = s.statusID
             WHERE wc.collectionID = :collectionId
         ";
-        
+
         $stmt = $conn->prepare($getCollectionQuery);
-        $stmt->bindParam(':collectionId', $collectionId);
+        $cid = (int) $collectionId;
+        $stmt->bindValue(':collectionId', $cid, PDO::PARAM_INT);
         $stmt->execute();
-        
+
         $collection = $stmt->fetch();
-        
+        if (!$collection) {
+            sendServerErrorResponse('Collection record could not be loaded after submit');
+        }
+
         // Format response
         $collectionData = [
             'collectionID' => (int)$collection['collectionID'],
@@ -126,17 +171,19 @@ try {
             ],
             'status' => $collection['statusName']
         ];
-        
+
         sendSuccessResponse([
             'collection' => $collectionData,
             'message' => 'Waste collection submitted successfully. It will be reviewed by aggregators.'
         ], 'Collection submitted successfully');
-        
+
     } else {
         sendServerErrorResponse('Failed to submit collection');
     }
-    
+
 } catch (PDOException $e) {
     sendServerErrorResponse('Database error: ' . $e->getMessage());
+} catch (Throwable $e) {
+    sendServerErrorResponse('Server error: ' . $e->getMessage());
 }
 ?>

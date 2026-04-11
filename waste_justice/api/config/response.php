@@ -4,6 +4,22 @@
  * Standardizes API responses for WasteJustice mobile app
  */
 
+if (!function_exists('getallheaders')) {
+    function getallheaders() {
+        $headers = [];
+        foreach ($_SERVER as $name => $value) {
+            if (strncmp($name, 'HTTP_', 5) === 0) {
+                $key = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
+                $headers[$key] = $value;
+            }
+        }
+        if (isset($_SERVER['CONTENT_TYPE'])) {
+            $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
+        }
+        return $headers;
+    }
+}
+
 /**
  * Send success response
  */
@@ -84,24 +100,40 @@ function sendServerErrorResponse($message = "Internal server error") {
  */
 function validateRequiredFields($data, $requiredFields) {
     $errors = [];
-    
+
     foreach ($requiredFields as $field) {
-        if (!isset($data[$field]) || empty(trim($data[$field]))) {
+        if (!array_key_exists($field, $data)) {
+            $errors[$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
+            continue;
+        }
+        $value = $data[$field];
+        if ($value === null || $value === '') {
+            $errors[$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
+            continue;
+        }
+        if (is_string($value) && trim($value) === '') {
             $errors[$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
         }
     }
-    
+
     return $errors;
 }
 
 /**
- * Sanitize input data
+ * Sanitize input data (JSON may contain int/float; never call trim() on those — PHP 8+ fatals).
  */
 function sanitizeInput($data) {
     if (is_array($data)) {
         return array_map('sanitizeInput', $data);
     }
-    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
+    if (is_int($data) || is_float($data) || is_bool($data)) {
+        return $data;
+    }
+    if ($data === null) {
+        return null;
+    }
+    $str = (string) $data;
+    return htmlspecialchars(strip_tags(trim($str)), ENT_QUOTES, 'UTF-8');
 }
 
 /**
@@ -160,12 +192,22 @@ function validateToken($token) {
  */
 function getCurrentUser() {
     $headers = getallheaders();
+    if (!is_array($headers)) {
+        $headers = [];
+    }
     $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-    
+
+    if ($authHeader === '' && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    if ($authHeader === '' && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+
     if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
         return null;
     }
-    
+
     $token = $matches[1];
     return validateToken($token);
 }

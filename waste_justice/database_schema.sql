@@ -1,8 +1,13 @@
--- WasteJustice Database Schema
--- Import this into your existing database: mobileapps_2026B_steve_nsabimana
+-- ============================================
+-- WasteJustice Complete Database
+-- Plastic Waste Collection, Aggregation, and Sale
+-- ============================================
+
+
+USE u628771162_nd;
 
 -- User table (all roles)
-CREATE TABLE IF NOT EXISTS `User` (
+CREATE TABLE `User` (
     `userID` INT PRIMARY KEY AUTO_INCREMENT,
     `userName` VARCHAR(255) NOT NULL,
     `userContact` VARCHAR(20),
@@ -21,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `User` (
 );
 
 -- Aggregator registration table
-CREATE TABLE IF NOT EXISTS `AggregatorRegistration` (
+CREATE TABLE `AggregatorRegistration` (
     `aggregatorID` INT AUTO_INCREMENT PRIMARY KEY,
     `userID` INT NOT NULL UNIQUE,
     `businessName` VARCHAR(255) NOT NULL,
@@ -33,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `AggregatorRegistration` (
 );
 
 -- Company registration table
-CREATE TABLE IF NOT EXISTS `CompanyRegistration` (
+CREATE TABLE `CompanyRegistration` (
     `registrationID` INT AUTO_INCREMENT PRIMARY KEY,
     `userID` INT NOT NULL UNIQUE,
     `companyName` VARCHAR(255) NOT NULL,
@@ -45,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `CompanyRegistration` (
 );
 
 -- Plastic waste types table
-CREATE TABLE IF NOT EXISTS `PlasticType` (
+CREATE TABLE `PlasticType` (
     `plasticTypeID` INT PRIMARY KEY AUTO_INCREMENT,
     `typeName` VARCHAR(255) NOT NULL UNIQUE,
     `typeCode` VARCHAR(50) NOT NULL UNIQUE,
@@ -53,13 +58,13 @@ CREATE TABLE IF NOT EXISTS `PlasticType` (
 );
 
 -- Transaction status table
-CREATE TABLE IF NOT EXISTS `Status` (
+CREATE TABLE `Status` (
     `statusID` INT PRIMARY KEY AUTO_INCREMENT,
     `statusName` VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- Waste collection table (Collector uploads)
-CREATE TABLE IF NOT EXISTS `WasteCollection` (
+CREATE TABLE `WasteCollection` (
     `collectionID` INT PRIMARY KEY AUTO_INCREMENT,
     `collectorID` INT NOT NULL,
     `plasticTypeID` INT NOT NULL,
@@ -84,7 +89,7 @@ CREATE TABLE IF NOT EXISTS `WasteCollection` (
 );
 
 -- Aggregator pricing table (transparent prices)
-CREATE TABLE IF NOT EXISTS `AggregatorPricing` (
+CREATE TABLE `AggregatorPricing` (
     `pricingID` INT AUTO_INCREMENT PRIMARY KEY,
     `aggregatorID` INT NOT NULL,
     `plasticTypeID` INT NOT NULL,
@@ -98,7 +103,7 @@ CREATE TABLE IF NOT EXISTS `AggregatorPricing` (
 );
 
 -- Company pricing table (transparent prices)
-CREATE TABLE IF NOT EXISTS `CompanyPricing` (
+CREATE TABLE `CompanyPricing` (
     `pricingID` INT AUTO_INCREMENT PRIMARY KEY,
     `companyID` INT NOT NULL,
     `plasticTypeID` INT NOT NULL,
@@ -112,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `CompanyPricing` (
 );
 
 -- Aggregator batches (collected waste from collectors)
-CREATE TABLE IF NOT EXISTS `AggregatorBatch` (
+CREATE TABLE `AggregatorBatch` (
     `batchID` INT AUTO_INCREMENT PRIMARY KEY,
     `aggregatorID` INT NOT NULL,
     `plasticTypeID` INT NOT NULL,
@@ -131,7 +136,7 @@ CREATE TABLE IF NOT EXISTS `AggregatorBatch` (
 );
 
 -- Payment transactions
-CREATE TABLE IF NOT EXISTS `Payment` (
+CREATE TABLE `Payment` (
     `paymentID` INT AUTO_INCREMENT PRIMARY KEY,
     `collectionID` INT NULL,
     `batchID` INT NULL,
@@ -155,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `Payment` (
 );
 
 -- Subscriptions table
-CREATE TABLE IF NOT EXISTS `Subscriptions` (
+CREATE TABLE `Subscriptions` (
     `subscriptionID` INT AUTO_INCREMENT PRIMARY KEY,
     `userID` INT NOT NULL,
     `planName` ENUM('Free', 'Basic', 'Standard', 'Premium') NOT NULL,
@@ -175,7 +180,7 @@ CREATE TABLE IF NOT EXISTS `Subscriptions` (
 );
 
 -- Feedback/rating system
-CREATE TABLE IF NOT EXISTS `Feedback` (
+CREATE TABLE `Feedback` (
     `feedbackID` INT AUTO_INCREMENT PRIMARY KEY,
     `fromUserID` INT NOT NULL,
     `toUserID` INT NOT NULL,
@@ -190,6 +195,114 @@ CREATE TABLE IF NOT EXISTS `Feedback` (
     FOREIGN KEY (`batchID`) REFERENCES `AggregatorBatch`(`batchID`) ON DELETE SET NULL,
     INDEX `idx_to_user` (`toUserID`)
 );
+
+-- Insert plastic types
+INSERT INTO `PlasticType` (`typeName`, `typeCode`, `description`) VALUES 
+('HDPE', 'HDPE', 'High-Density Polyethylene - bottles, containers'),
+('PET', 'PET', 'Polyethylene Terephthalate - water bottles, food containers'),
+('PVC', 'PVC', 'Polyvinyl Chloride - pipes, packaging'),
+('LDPE', 'LDPE', 'Low-Density Polyethylene - bags, films'),
+('PP', 'PP', 'Polypropylene - containers, caps');
+
+-- Insert statuses
+INSERT INTO `Status` (`statusName`) VALUES 
+('Pending'),
+('Accepted'),
+('Rejected'),
+('Delivered'),
+('Available'),
+('Sold');
+
+-- Insert default admin
+INSERT INTO `User` (`userName`, `userContact`, `userEmail`, `userPassword`, `userRole`, `status`, `subscription_status`) VALUES 
+('System Admin', '+233123456789', 'admin@wastejustice.com', 'admin123', 'Admin', 'active', 'active');
+
+-- Insert sample users
+INSERT INTO `User` (`userName`, `userContact`, `userEmail`, `userPassword`, `userRole`, `latitude`, `longitude`, `address`, `status`, `subscription_status`) VALUES 
+('Kwame Mensah', '+233244123456', 'collector@wastejustice.com', 'collector123', 'Waste Collector', 5.6037, -0.1870, 'Accra Central', 'active', 'free'),
+('Ama Osei', '+233244789012', 'aggregator1@wastejustice.com', 'agg123', 'Aggregator', 5.6050, -0.1900, 'Kaneshie Market', 'active', 'free'),
+('Yaw Boateng', '+233244345678', 'aggregator2@wastejustice.com', 'agg456', 'Aggregator', 5.6000, -0.1850, 'Circle, Accra', 'active', 'free'),
+('RecycleGhana Ltd', '+233302555666', 'company@wastejustice.com', 'company123', 'Recycling Company', 5.6100, -0.1950, 'Industrial Area, Accra', 'active', 'free');
+
+-- Insert aggregator registrations
+INSERT INTO `AggregatorRegistration` (`userID`, `businessName`, `contactPerson`, `capacity`) VALUES
+(3, 'Green Collection Hub', 'Ama Osei', 5000.00),
+(4, 'Eco Waste Center', 'Yaw Boateng', 3000.00);
+
+-- Insert company registration
+INSERT INTO `CompanyRegistration` (`userID`, `companyName`, `companyContact`, `companyEmail`) VALUES
+(5, 'RecycleGhana Ltd', '+233302555666', 'company@wastejustice.com');
+
+-- Insert aggregator pricing
+INSERT INTO `AggregatorPricing` (`aggregatorID`, `plasticTypeID`, `pricePerKg`) VALUES
+(3, 1, 5.00), (3, 2, 4.50), (3, 3, 4.00), (3, 4, 3.50), (3, 5, 4.20),  -- Aggregator 1 prices
+(4, 1, 5.20), (4, 2, 4.70), (4, 3, 4.10), (4, 4, 3.60), (4, 5, 4.30);  -- Aggregator 2 prices
+
+-- Insert company pricing
+INSERT INTO `CompanyPricing` (`companyID`, `plasticTypeID`, `pricePerKg`) VALUES
+(5, 1, 7.00), (5, 2, 6.50), (5, 3, 6.00), (5, 4, 5.50), (5, 5, 6.20);  -- Company prices
+
+-- Create view for nearest aggregators with pricing (only subscribed aggregators)
+CREATE VIEW `nearest_aggregators` AS
+SELECT 
+    u.userID as aggregatorID,
+    ar.businessName,
+    u.userName,
+    u.userContact as contact,
+    u.address,
+    u.latitude,
+    u.longitude,
+    u.rating,
+    u.totalRatings,
+    pt.plasticTypeID,
+    pt.typeName as plasticType,
+    ap.pricePerKg,
+    ar.capacity,
+    u.status
+FROM User u
+JOIN AggregatorRegistration ar ON u.userID = ar.userID
+JOIN AggregatorPricing ap ON u.userID = ap.aggregatorID
+JOIN PlasticType pt ON ap.plasticTypeID = pt.plasticTypeID
+INNER JOIN Subscriptions s ON u.userID = s.userID
+WHERE u.userRole = 'Aggregator' 
+AND u.status = 'active' 
+AND ap.isActive = TRUE
+AND s.paymentStatus = 'Success'
+AND s.isActive = TRUE
+AND (s.subscriptionEnd IS NULL OR s.subscriptionEnd >= CURDATE());
+
+-- Create view for available batches with transparent pricing
+CREATE VIEW `available_batches` AS
+SELECT 
+    ab.batchID,
+    ab.aggregatorID,
+    ar.businessName as aggregatorName,
+    pt.plasticTypeID,
+    pt.typeName as plasticType,
+    ab.totalWeight,
+    cp.pricePerKg as companyPrice,
+    ab.createdAt,
+    ab.statusID,
+    s.statusName
+FROM AggregatorBatch ab
+JOIN User u ON ab.aggregatorID = u.userID
+JOIN AggregatorRegistration ar ON u.userID = ar.userID
+JOIN PlasticType pt ON ab.plasticTypeID = pt.plasticTypeID
+JOIN CompanyPricing cp ON ab.plasticTypeID = cp.plasticTypeID
+JOIN Status s ON ab.statusID = s.statusID
+WHERE ab.statusID = 5
+AND cp.isActive = TRUE
+ORDER BY ab.createdAt DESC;
+
+-- ============================================
+-- Migration: Add Platform Fee Support
+-- ============================================
+-- If you have an existing database, run these ALTER statements:
+-- ALTER TABLE `Payment` 
+-- ADD COLUMN `platformFee` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 COMMENT '1% platform fee for WasteJustice' AFTER `amount`,
+-- ADD COLUMN `grossAmount` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 COMMENT 'Original amount before fee deduction' AFTER `platformFee`;
+-- 
+-- UPDATE `Payment` SET `grossAmount` = `amount` WHERE `grossAmount` = 0;
 
 -- PaystackPayments table for Paystack payment integration
 CREATE TABLE IF NOT EXISTS `PaystackPayments` (
@@ -212,48 +325,3 @@ CREATE TABLE IF NOT EXISTS `PaystackPayments` (
     INDEX `idx_date` (`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Insert plastic types
-INSERT IGNORE INTO `PlasticType` (`typeName`, `typeCode`, `description`) VALUES 
-('HDPE', 'HDPE', 'High-Density Polyethylene - bottles, containers'),
-('PET', 'PET', 'Polyethylene Terephthalate - water bottles, food containers'),
-('PVC', 'PVC', 'Polyvinyl Chloride - pipes, packaging'),
-('LDPE', 'LDPE', 'Low-Density Polyethylene - bags, films'),
-('PP', 'PP', 'Polypropylene - containers, caps');
-
--- Insert statuses
-INSERT IGNORE INTO `Status` (`statusName`) VALUES 
-('Pending'),
-('Accepted'),
-('Rejected'),
-('Delivered'),
-('Available'),
-('Sold');
-
--- Insert default admin (if not exists)
-INSERT IGNORE INTO `User` (`userName`, `userContact`, `userEmail`, `userPassword`, `userRole`, `status`, `subscription_status`) VALUES 
-('System Admin', '+233123456789', 'admin@wastejustice.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'active', 'active');
-
--- Insert sample users (if not exists)
-INSERT IGNORE INTO `User` (`userName`, `userContact`, `userEmail`, `userPassword`, `userRole`, `latitude`, `longitude`, `address`, `status`, `subscription_status`) VALUES 
-('Kwame Mensah', '+233244123456', 'collector@wastejustice.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Waste Collector', 5.6037, -0.1870, 'Accra Central', 'active', 'free'),
-('Ama Osei', '+233244789012', 'aggregator1@wastejustice.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Aggregator', 5.6050, -0.1900, 'Kaneshie Market', 'active', 'free'),
-('Yaw Boateng', '+233244345678', 'aggregator2@wastejustice.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Aggregator', 5.6000, -0.1850, 'Circle, Accra', 'active', 'free'),
-('RecycleGhana Ltd', '+233302555666', 'company@wastejustice.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Recycling Company', 5.6100, -0.1950, 'Industrial Area, Accra', 'active', 'free');
-
--- Insert aggregator registrations (if not exists)
-INSERT IGNORE INTO `AggregatorRegistration` (`userID`, `businessName`, `contactPerson`, `capacity`) VALUES
-(3, 'Green Collection Hub', 'Ama Osei', 5000.00),
-(4, 'Eco Waste Center', 'Yaw Boateng', 3000.00);
-
--- Insert company registration (if not exists)
-INSERT IGNORE INTO `CompanyRegistration` (`userID`, `companyName`, `companyContact`, `companyEmail`) VALUES
-(5, 'RecycleGhana Ltd', '+233302555666', 'company@wastejustice.com');
-
--- Insert aggregator pricing (if not exists)
-INSERT IGNORE INTO `AggregatorPricing` (`aggregatorID`, `plasticTypeID`, `pricePerKg`) VALUES
-(3, 1, 5.00), (3, 2, 4.50), (3, 3, 4.00), (3, 4, 3.50), (3, 5, 4.20),  -- Aggregator 1 prices
-(4, 1, 5.20), (4, 2, 4.70), (4, 3, 4.10), (4, 4, 3.60), (4, 5, 4.30);  -- Aggregator 2 prices
-
--- Insert company pricing (if not exists)
-INSERT IGNORE INTO `CompanyPricing` (`companyID`, `plasticTypeID`, `pricePerKg`) VALUES
-(5, 1, 7.00), (5, 2, 6.50), (5, 3, 6.00), (5, 4, 5.50), (5, 5, 6.20);  -- Company prices
