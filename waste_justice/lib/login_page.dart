@@ -361,8 +361,8 @@ class _LoginPageState extends State<LoginPage> {
                     return AlertDialog(
                       title: const Text('About WasteJustice'),
                       content: const Text(
-                        'WasteJustice connects plastic waste collectors with trusted aggregators '
-                        'for fair and transparent prices, helping build a cleaner community.',
+                        'Turn recyclable waste into real income. '
+                        'Connect with trusted aggregators near you.',
                       ),
                       actions: [
                         TextButton(
