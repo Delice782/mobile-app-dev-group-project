@@ -1,2 +1,1 @@
-# Mobile Application Development Group Project
- 
+# Mobile Application Development Group 
