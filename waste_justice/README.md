@@ -4,7 +4,11 @@
 A new Flutter project.
 
 ## Getting Started
+# WasteJustice 
 
+A Flutter mobile app that connects plastic waste collectors with trusted
+aggregators for fair and transparent pricing — helping build a cleaner,
+more sustainable Ghana.
 This project is a starting point for a Flutter application.
 
 A few resources to get you started if this is your first Flutter project:
