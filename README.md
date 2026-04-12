@@ -1,1 +1,1 @@
-# Mobile Application Development Group Project - Wate
+# Mobile Application Development Group Project - Waste
