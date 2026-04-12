@@ -66,7 +66,7 @@ class _SignupPageState extends State<SignupPage> {
       if (responseData['success'] == true) {
         setState(() {
           _isSubmitting = false;
-          _successMessage = 'Account created successfully! Please login.';
+          _successMessage = 'Your account was created successfully! Please login.';
         });
 
         Future.delayed(const Duration(seconds: 2), () {
@@ -75,7 +75,7 @@ class _SignupPageState extends State<SignupPage> {
       } else {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = responseData['message'] ?? 'Registration failed';
+          _errorMessage = responseData['message'] ?? 'The registration has failed';
         });
       }
     } catch (e) {
@@ -257,7 +257,7 @@ class _SignupPageState extends State<SignupPage> {
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return "Enter your email";
-        if (!value.contains("@")) return "Invalid email";
+        if (!value.contains("@")) return "Your email is invalid";
         return null;
       },
     );
