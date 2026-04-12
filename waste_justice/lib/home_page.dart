@@ -1,469 +1,205 @@
-// import 'package:flutter/material.dart';
-// import 'login_page.dart';
-// import 'signup_page.dart';
-// import 'contact_utils.dart';  // ADD THIS LINE
-
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
-import 'pages.dart';  // Add this line if not already there
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _fadeAnims;
+  late List<Animation<Offset>> _slideAnims;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 5 elements: icon, headline, subtext, login btn, signup btn
+    final delays = [0, 200, 350, 500, 650];
+
+    _controllers = List.generate(
+      5,
+          (i) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 600),
+      ),
+    );
+
+    _fadeAnims = _controllers
+        .map((c) => Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: c, curve: Curves.easeOut),
+    ))
+        .toList();
+
+    _slideAnims = _controllers
+        .map((c) => Tween<Offset>(
+      begin: const Offset(0, 0.4),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: c, curve: Curves.easeOut)))
+        .toList();
+
+    // Start each animation with a staggered delay
+    for (int i = 0; i < _controllers.length; i++) {
+      Future.delayed(Duration(milliseconds: delays[i]), () {
+        if (mounted) _controllers[i].forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Widget _animated(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnims[index],
+      child: SlideTransition(
+        position: _slideAnims[index],
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green.shade50,
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildWelcomeSection(),
-                  _buildFeatureCards(context),
-                  _buildHowItWorks(),
-                  _buildCallToAction(context),
-                  _buildFooter(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      color: Colors.green.shade600,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
-        bottom: 12,
-        left: 20,
-        right: 20,
-      ),
-      child: Row(
-        children: [
-          const Text('🌍', style: TextStyle(fontSize: 24)),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'WasteJustice',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Fair, Transparent Waste Management in Ghana',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-            child: const Text('Login'),
-          ),
-          const SizedBox(width: 4),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => SignupPage()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.green.shade700,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            child: const Text('Sign Up'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWelcomeSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: Colors.green.shade400, width: 4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Welcome to WasteJustice',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
-            ),
-          ),
-          Divider(color: Colors.green.shade200, thickness: 1, height: 20),
-          const Text(
-            'Fair, Transparent, and Connected Waste Management in Ghana',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'WasteJustice is a digital platform that connects waste collectors and recycling '
-            'companies to make every transaction transparent, fair, and traceable. Together, '
-            "we're building a cleaner, more sustainable Ghana.",
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade700, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCards(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          // _buildCard(
-          //   icon: '♻️',
-          //   title: 'For Waste Collectors',
-          //   body: 'Track your waste collection, view transparent prices, and get fair compensation for your work.',
-          //   buttonText: 'Register as Collector',
-          //   isPrimary: true,
-          //   onPressed: () {
-          //     ScaffoldMessenger.of(context).showSnackBar(
-          //       const SnackBar(content: Text('Collector registration coming soon!')),
-          //     );
-          //   },
-          // ),
-
-          _buildCard(
-            icon: '♻️',
-            title: 'For Waste Collectors',
-            body: 'Track your waste collection, view transparent prices, and get fair compensation for your work.',
-            buttonText: 'Test Collector Features',
-            isPrimary: true,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => LocationPage()),  // ← No "const" here!
-              );
-            },
-          ),
-
-          const SizedBox(height: 12),
-          _buildCard(
-            icon: '🏭',
-            title: 'For Recycling Companies',
-            body: 'Connect with waste collectors, set fair prices, and build a sustainable supply chain.',
-            buttonText: 'Register as Company',
-            isPrimary: true,
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Company registration coming soon!')),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          _buildCard(
-            icon: '💚',
-            title: 'Transparent System',
-            body: 'Every transaction is tracked, every price is visible, and every payment is fair.',
-            buttonText: 'Login to Dashboard',
-            isPrimary: false,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCard({
-    required String icon,
-    required String title,
-    required String body,
-    required String buttonText,
-    required bool isPrimary,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 32)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isPrimary ? Colors.green.shade600 : Colors.white,
-                foregroundColor: isPrimary ? Colors.white : Colors.black87,
-                side: isPrimary ? null : BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHowItWorks() {
-    final steps = [
-      {'number': '1', 'title': 'Collect Waste', 'body': 'Waste collectors gather recyclable materials from communities across Ghana.'},
-      {'number': '2', 'title': 'Record Transaction', 'body': 'Log waste details in the system including type, weight, and location.'},
-      {'number': '3', 'title': 'Connect with Companies', 'body': 'Recycling companies review requests and arrange collection.'},
-      {'number': '4', 'title': 'Fair Payment', 'body': 'Transparent pricing ensures collectors receive fair compensation.'},
-      {'number': '5', 'title': 'Track Impact', 'body': 'Monitor environmental impact and track waste management progress.'},
-      {'number': '6', 'title': 'Build Together', 'body': 'Create a sustainable future through transparent collaboration.'},
-    ];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: Colors.green.shade400, width: 4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'How It Works',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
-            ),
-          ),
-          Divider(color: Colors.green.shade200, thickness: 1, height: 20),
-          ...List.generate((steps.length / 2).ceil(), (rowIndex) {
-            final left = steps[rowIndex * 2];
-            final rightIndex = rowIndex * 2 + 1;
-            final right = rightIndex < steps.length ? steps[rightIndex] : null;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _buildStep(left['number']!, left['title']!, left['body']!)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: right != null
-                        ? _buildStep(right['number']!, right['title']!, right['body']!)
-                        : const SizedBox(),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep(String number, String title, String body) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$number. $title',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.green.shade700,
-          ),
+      backgroundColor: const Color(0xFFF0FDF4),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(child: _buildBody()),
+            _buildFooter(),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          body,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildCallToAction(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+      color: const Color(0xFF16A34A),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: const Row(
+        children: [
+          Text('🌍', style: TextStyle(fontSize: 20)),
+          SizedBox(width: 8),
+          Text(
+            'WasteJustice',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Text(
-            'Ready to Get Started?',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
+    );
+  }
+
+  Widget _buildBody() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _animated(0,
+              const Text('♻️', style: TextStyle(fontSize: 64)),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Join WasteJustice today and be part of Ghana's waste management revolution.",
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => SignupPage()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+            const SizedBox(height: 20),
+            _animated(1,
+              const Text(
+                'Turn your waste\ninto cash.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF14532D),
+                  height: 1.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _animated(2,
+              const Text(
+                'Find nearby collectors and sell\nyour recyclable waste.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF4B7C5A),
+                  height: 1.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+            _animated(3,
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text(
-                      'Create Account',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
+                  ),
+                  child: const Text(
+                    'Log In',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
+            ),
+            const SizedBox(height: 12),
+            _animated(4,
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => SignupPage()),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF16A34A),
+                    side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black87,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
+                  ),
+                  child: const Text(
+                    'Sign Up',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildFooter() {
-    return Container(
-      color: const Color(0xFF1F2937),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      child: Column(
-        children: [
-          Text(
-            '© 2025 WasteJustice. Building a cleaner Ghana together.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Fair • Transparent • Connected',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Text(
+        '© 2025 WasteJustice · Fair · Transparent · Connected',
+        style: TextStyle(fontSize: 11, color: Colors.green.shade400),
       ),
     );
   }
