@@ -2,7 +2,7 @@
 # Waste Justice
 
 A new Flutter project
-## Gettin
+## Getti
 # WasteJustice 
 
 A Flutter mobile app that connects plastic waste collectors with trusted
