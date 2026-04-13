@@ -1,1 +1,1 @@
-# Mobile Application Development Group Project - Waste Justic
+# Mobile Application Development Group Project - Waste Justice
