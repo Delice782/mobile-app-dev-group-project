@@ -2,7 +2,7 @@
 # Waste Justice
 
 A new Flutter project
-## Getting Start
+## Getting Star
 # WasteJustice 
 
 A Flutter mobile app that connects plastic waste collectors with trusted
